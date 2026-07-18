@@ -54,7 +54,7 @@ export const createAuthServices = (authRepository) => ({
           throw new InvalidCredentialError();
         }
         
-        const signedToken = await issueToken(id);
+        const signedToken = await issueToken(user_id);
 
         return signedToken;
     },
@@ -73,7 +73,7 @@ export const createAuthServices = (authRepository) => ({
           user.email
         );
 
-        const signedToken = await issueToken(id);
+        const signedToken = await issueToken(user_id);
 
         return signedToken;
     },    
