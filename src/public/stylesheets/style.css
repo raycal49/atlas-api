@@ -19,7 +19,8 @@ a {
     width: 100%;
 }
 
-#userinfo {
+#userinfo,
+.card {
   display:flex;
   padding: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);

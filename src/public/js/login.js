@@ -1,7 +1,30 @@
 const form = document.querySelector("#userinfo");
+const submitBtn = form.querySelector('button[type="submit"]');
+const formError = document.querySelector("#form-error");
 
-async function sendData() {
-    // Associate the FormData object with the form element
+const showFieldErrors = (fieldErrors) => {
+    const fields = ["username", "password"];
+
+    for (const field of fields) {
+        const span = document.querySelector(`#${field}-error`);
+        span.classList.toggle("invisible", !fieldErrors[field]);
+    }
+}
+
+// 401s and 500s are one message for the whole form, not tied to a field
+const showFormError = (message) => {
+    formError.textContent = message ?? "";
+    formError.classList.toggle("invisible", !message);
+}
+
+const hideAllErrors = () => {
+    showFieldErrors({});
+    showFormError(null);
+}
+
+async function loginUser() {
+    submitBtn.disabled = true;
+
     const body = new URLSearchParams(new FormData(form));
 
     try {
@@ -13,34 +36,40 @@ async function sendData() {
             body,
         });
 
-        // const status = await response.ok;
-        // console.log("status has the value: " + status);
+        if (response.ok) {
+            window.location.href = '/dashboard.html';
+            return;
+        }
 
-        // if (status === false)
-        // {
-        //     const errParagraphElement = document.createElement("p");
-        //     errParagraphElement.textContent = "Error: Username not found!";
-        //     const subButton = document.getElementById("submit_button");
-        //     const parentForm = subButton.parentNode
-        //     parentForm.insertBefore(errParagraphElement, subButton);
-        // }
-        // else
-        // {
-        //     const errParagraphElement = document.createElement("p");
-        //     errParagraphElement.textContent = "Successfully logged in!";
-        //     const subButton = document.getElementById("submit_button");
-        //     const parentForm = subButton.parentNode
-        //     parentForm.insertBefore(errParagraphElement, subButton);
-        // }
+        const responseBody = await response.json();
 
-        // console.log(status);
+        console.log("The result of the server-side validation is: " + JSON.stringify(responseBody, null, 2));
+
+        if (response.status === 400 && responseBody.status === "fail") {
+            showFieldErrors(responseBody.errors);
+            return;
+        }
+
+        if (response.status === 401) {
+            // deliberately vague -- never say which of the two was wrong
+            showFormError("Invalid username or password");
+            return;
+        }
+
+        showFormError("Something went wrong. Please try again.");
     } catch (e) {
         console.error(e);
+        showFormError("Something went wrong. Please try again.");
+    } finally {
+        submitBtn.disabled = false;
     }
-
 }
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await sendData();
+    hideAllErrors();
+    await loginUser();
 });
+
+// stale errors disappear as soon as the user starts fixing their input
+form.addEventListener("input", hideAllErrors);

@@ -17,8 +17,8 @@ const verifyPassword = (password, passwordHash) => {
   return argon2.verify(passwordHash, password);
 }
 
-const createClaims = (id, role) => {
-  return {"id":id, "role":role};
+const createClaims = (id) => {
+  return {"id":id};
 }
 
 const createToken = async (claims) => {
@@ -30,8 +30,8 @@ const createToken = async (claims) => {
       .sign(secret)
 };
 
-const issueToken = async (id, role) => {
-  const claims = createClaims(id, role);
+const issueToken = async (id) => {
+  const claims = createClaims(id);
 
   const token = await createToken(claims);
 
@@ -46,7 +46,7 @@ export const createAuthServices = (authRepository) => ({
             throw new InvalidCredentialError();
         }
 
-        const { id, role, hash } = userCredentials;
+        const { user_id, hash } = userCredentials;
 
         const queryResult = await verifyPassword(password, hash);
 
@@ -54,7 +54,7 @@ export const createAuthServices = (authRepository) => ({
           throw new InvalidCredentialError();
         }
         
-        const signedToken = await issueToken(id,role);
+        const signedToken = await issueToken(id);
 
         return signedToken;
     },
@@ -67,14 +67,13 @@ export const createAuthServices = (authRepository) => ({
         
         const hash = await hashPassword(user.password);
 
-        const {id, role} = await authRepository.insertUser(
-          "Customer",
+        const {user_id} = await authRepository.insertUser(
           user.username,
           hash,
           user.email
         );
 
-        const signedToken = await issueToken(id,role);
+        const signedToken = await issueToken(id);
 
         return signedToken;
     },    

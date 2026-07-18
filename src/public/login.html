@@ -21,26 +21,30 @@
             <h1> Welcome </h1>
             <p class="subtitle"> Sign into your account. </p>
 
-            <div id="inputGroup">
-                <label for="username"> Username:  </label>
-                <input type="text" placeholder="Enter username" name="username"/>
-                <span class="error" id="emailError" aria-live="polite"> </span>
+            <div class="inputGroup">
+                <label for="username"> Username: </label>
+                <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="username" required />
             </div>
 
-            <div id="inputGroup">
-                <label for="password"> Password:  </label>
-                <input type="password" placeholder="Enter password" name="password"/>
-                <span class="passwordError"> </span>
+            <span class=invisible id="username-error" style="color:red" aria-live="polite"> Username is required</span>
+
+            <div class="inputGroup">
+                <label for="password"> Password: </label>
+                <input type="password" id="password" name="password" placeholder="Enter password" autocomplete="current-password" required />
             </div>
-            
+
+            <span class=invisible id="password-error" style="color:red" aria-live="polite"> Password is required</span>
+
+            <!-- form-level errors (wrong credentials, server trouble) -- text is filled in by login.js -->
+            <span class=invisible id="form-error" style="color:red" aria-live="polite"> </span>
+
             <p> Don't have an account?
                 <a href="/register.html">Register here</a>
             </p>
-        
-            <div class="inputGroup">
-                <label for="submit"> </label>
 
-                <button id="submit_button" type="button"> Submit </button>
+            <div class="inputGroup">
+                <label for="submit-button"> </label>
+                <button id="submit-button" type="submit"> Submit </button>
             </div>
         </form>
     </main>

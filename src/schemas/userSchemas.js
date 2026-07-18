@@ -46,3 +46,20 @@ export const registerSchema = z
       .regex(/[0-9]/, 'Password must contain a number'),
   })
   .strict(); // reject unexpected keys instead of silently stripping them
+
+// Login only checks presence and sane lengths, not the full password policy —
+// tightening the policy later shouldn't lock out accounts created before it.
+export const loginSchema = z
+  .object({
+    username: z
+      .string({ required_error: 'Username is required' })
+      .trim()
+      .min(1, 'Username is required')
+      .max(15, 'Username must be at most 15 characters'),
+
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(1, 'Password is required')
+      .max(15, 'Password must be at most 15 characters'),
+  })
+  .strict(); // reject unexpected keys instead of silently stripping them
