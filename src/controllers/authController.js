@@ -1,4 +1,4 @@
-import { cookieOptions } from '../config/cookies.js';
+import { cookieOptions, clearCookieOptions } from '../config/cookies.js';
 
 export const createAuthController = (authServices) => ({
     loginUser: async (req, res) => {
@@ -19,5 +19,11 @@ export const createAuthController = (authServices) => ({
       res.cookie("token", token, cookieOptions);
       
       return res.status(201).json({ message: `${user.username}, your account was successfully created!`});
+    },
+    logoutUser: async (req, res) => {
+      // options must match what login set, or the browser treats it as a different cookie and keeps the old one
+      res.clearCookie("token", clearCookieOptions);
+
+      return res.status(200).json({ message: 'Logged out' });
     }
 })

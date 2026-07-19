@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name= "author" content = "Raymond Calderon">
     <link rel="stylesheet" href="/stylesheets/style.css">
+    <script src="/js/dashboard.js" defer></script>
     <title>Phone Co</title>
 </head>
 
@@ -30,9 +31,12 @@
                 <p> No recent transactions. </p>
             </div>
 
-            <p>
-                <a href="/login.html">Log out</a>
-            </p>
+            <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->
+            <span class=invisible id="form-error" style="color:red" aria-live="polite"> </span>
+
+            <div class="inputGroup">
+                <button id="logout-button" type="button"> Log out </button>
+            </div>
         </section>
     </main>
 
