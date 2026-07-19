@@ -20,3 +20,19 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+export class ExpiredTokenError extends Error {
+  constructor(options) {
+    super("Session expired, please log in again", options); // options carries { cause }
+    this.name = "ExpiredToken";
+    this.statusCode = 401;
+  }
+}
+
+export class InvalidTokenError extends Error {
+  constructor(options) {
+    super("Invalid authentication token", options);
+    this.name = "InvalidToken";
+    this.statusCode = 401;
+  }
+}

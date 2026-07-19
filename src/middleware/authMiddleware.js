@@ -10,9 +10,16 @@ export const createAuthMiddleware = () => {
     if (!token)
         return res.status(401).json({ error: 'no token' });
 
-    const { payload } = await jwtVerify(token, secret, {"algorithms": ['HS256']});
+    try {
+      const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+      req.tokenInfo = payload;
+    } catch (err) {
+      if (err instanceof errors.JWTExpired)
+        throw new ExpiredTokenError({ cause: err });
+      throw new InvalidTokenError({ cause: err });
+    }
 
-    console.log("The contents of the payload within the cookies arE: " + payload);
+    console.log("The contents of the payload within the cookies are: " + payload);
 
     req.tokenInfo = payload;
     next();
