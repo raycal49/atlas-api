@@ -5,7 +5,7 @@ export const cookieOptions = {
   secure: isProd,                 // HTTPS-only in prod, off for http://localhost
   sameSite: 'strict',             // CSRF defense
   path: '/',
-  maxAge: 60 * 60 * 1000 // 7 days — should match your JWT expiry
+  maxAge: 60 * 60 * 1000 //1 hour
 };
 
 // Used by logout so it always matches what login set
