@@ -4,10 +4,10 @@ import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import { createDb } from './database/db.js';
 
-import { createUserRepository } from './repositories/userRepos.js'
-import { createUserServices } from './services/userServices.js';
-import { createUserController } from './controllers/userController.js'
-import { createUserRoutes } from './routes/userRouter.js';
+// import { createUserRepository } from './repositories/userRepos.js'
+// import { createUserServices } from './services/userServices.js';
+// import { createUserController } from './controllers/userController.js'
+// import { createUserRoutes } from './routes/userRouter.js';
 
 import { createAuthRepository } from './repositories/authRepo.js'
 import { createAuthServices } from './services/authServices.js';
@@ -17,10 +17,10 @@ import { createAuthRoutes } from './routes/authRouter.js';
 
 const sql = createDb();
 
-const userRepo = createUserRepository(sql);
-const userServices = createUserServices(userRepo);
-const userController = createUserController(userServices);
-const userRoutes = createUserRoutes(userController);
+// const userRepo = createUserRepository(sql);
+// const userServices = createUserServices(userRepo);
+// const userController = createUserController(userServices);
+// const userRoutes = createUserRoutes(userController);
 
 const authRepo = createAuthRepository(sql);
 const authServices = createAuthServices(authRepo);
@@ -38,7 +38,7 @@ app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/users', userRoutes);
+// app.use('/users', userRoutes);
 // app.use('/auth', authMiddleware, authRoutes);
 app.use('/auth', authRoutes);
 

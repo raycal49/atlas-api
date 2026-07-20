@@ -8,8 +8,8 @@ export class InvalidCredentialError extends Error {
 
 export class ExistingAccountError extends Error {
   constructor(options) {
-    super("Account with this username already exists", options);        // sets message + handles cause
-    this.name = "UsernameTaken";  // otherwise it lies and says "Error"
+    super("Account with this username already exists", options);
+    this.name = "UsernameTaken";
     this.statusCode = 409; // 409 - conflict i think
   }
 }
@@ -23,7 +23,7 @@ export class ValidationError extends Error {
 
 export class ExpiredTokenError extends Error {
   constructor(options) {
-    super("Session expired, please log in again", options); // options carries { cause }
+    super("Session expired, please log in again", options);
     this.name = "ExpiredToken";
     this.statusCode = 401;
   }

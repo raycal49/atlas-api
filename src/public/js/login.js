@@ -37,7 +37,7 @@ async function loginUser() {
         });
 
         if (response.ok) {
-            window.location.href = './protected/dashboard.html';
+            window.location.href = '../views/dashboard.html';
             return;
         }
 
