@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import { jwtVerify } from 'jose';
-import { ExpiredTokenError } from '../errors/authErrors.js';
+import { InvalidTokenError, ExpiredTokenError } from '../errors/authErrors.js';
 import { JWTExpired } from 'jose/errors';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
