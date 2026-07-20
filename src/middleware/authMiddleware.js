@@ -21,8 +21,6 @@ export const createAuthMiddleware = () => {
       throw new InvalidTokenError({ cause: err });
     }
 
-    console.log("The contents of the payload within the cookies are: " + payload);
-
     next();
   };
 };
