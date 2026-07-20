@@ -18,7 +18,7 @@ export class AlreadyOnPlanError extends Error {
 export class AlreadySubscribedError extends Error {
   constructor(options) {
     super("User already has an active subscription", options);
-    this.name = "AlreadyOnPlan";
+    this.name = "AlreadySubscribed";
     this.statusCode = 409;
   }
 }
