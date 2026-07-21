@@ -17,7 +17,7 @@ export const createAuthRepository = (sql) => ({
       const rows = await sql`
         INSERT INTO users (username, hash, email)
         VALUES (${username}, ${hash}, ${email})
-        RETURNING user_id, role
+        RETURNING user_id
         `
         
       // console.log("insertUser rows:", rows)

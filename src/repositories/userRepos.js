@@ -33,6 +33,14 @@ const translateUniqueViolation = (err) => {
 };
 
 export const createUserRepository = (sql) => ({
+  findAllActivePlans: async () => {
+    return await sql`
+      SELECT plan_id, plan_name, price_per_month, description
+      FROM plans
+      WHERE is_active = true
+      ORDER BY price_per_month`;
+  },
+
   findActivePlanByName: async (planName) => {
     const rows = await sql`
       SELECT plan_id, price_per_month FROM plans

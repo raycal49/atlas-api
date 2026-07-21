@@ -1,6 +1,6 @@
 import { jwtVerify } from 'jose';
 import { JWTExpired } from 'jose/errors';
-import { InvalidTokenError, ExpiredTokenError } from '../errors/authErrors.js';
+import { InvalidTokenError, ExpiredTokenError, MissingTokenError } from '../errors/authErrors.js';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -8,8 +8,10 @@ export const createAuthMiddleware = () => {
   return async (req, res, next) => {
     const token = req.cookies?.token;
 
+    // throw (don't respond directly) so ALL auth failures funnel through the
+    // error middleware, where the browser-vs-fetch presentation is decided
     if (!token)
-        return res.status(401).json({ error: 'no token' });
+        throw new MissingTokenError();
 
     try {
       const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });

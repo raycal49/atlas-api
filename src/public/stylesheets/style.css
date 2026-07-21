@@ -41,7 +41,18 @@ a {
 }
 
 .invisible {
-  visibility:hidden;
+  visibility:hidden;  /* hidden but still takes up space -- no layout jump for error spans */
+}
+
+.hidden {
+  display: none;      /* no box at all -- for whole sections that appear later */
+}
+
+#planList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
 }
 
 #password-error {

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name= "author" content = "Raymond Calderon">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <script src="/js/plans.js" defer></script>
+    <title>Phone Co</title>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <a href="index.html"> Home </a>
+            <a href="/dashboard"> Dashboard </a>
+        </nav>
+    </header>
+
+    <main id="loginPageBody">
+        <h1> Pick a plan </h1>
+        <p class="subtitle"> Choose the plan that fits you. </p>
+
+        <!-- plans.js fills this with one card per plan fetched from /plans -->
+        <div id="planList"></div>
+
+        <!-- hidden until a plan is chosen -->
+        <form id="paymentForm" class="card hidden">
+            <h2> Subscribe to <span id="chosenPlanName"></span> </h2>
+
+            <div class="inputGroup">
+                <label for="card_number"> Card number: </label>
+                <input type="text" id="card_number" name="card_number" placeholder="Enter card number"
+                       inputmode="numeric" minlength="13" maxlength="19" required />
+            </div>
+
+            <span class=invisible id="card_number-error" style="color:red" aria-live="polite"> Card number must be 13-19 digits</span>
+
+            <!-- form-level errors (already subscribed, server trouble) -- text is filled in by plans.js -->
+            <span class=invisible id="form-error" style="color:red" aria-live="polite"> </span>
+
+            <div class="inputGroup">
+                <button id="submit-button" type="submit"> Pay </button>
+            </div>
+        </form>
+    </main>
+
+    <footer>
+        <p >
+            <a href="about.html"> About us </a>
+        </p>
+    </footer>
+</body>
+</html>

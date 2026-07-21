@@ -19,4 +19,8 @@ export const createUserServices = (userRepo) => ({
   getCurrentSubscription: async (userId) => {
     return await userRepo.findActiveSubscription(userId) ?? null;
   },
+
+  getPlans: async () => {
+    return await userRepo.findAllActivePlans();
+  },
 });

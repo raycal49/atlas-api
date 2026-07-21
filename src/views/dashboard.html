@@ -21,14 +21,25 @@
             <h1> Dashboard </h1>
             <p class="subtitle"> Welcome back. </p>
 
-            <div class="inputGroup">
-                <h2> Account Balance </h2>
-                <p> $0.00 </p>
+            <!-- shown briefly after a payment; dashboard.js fills in the receipt id -->
+            <div id="paidBanner" class="inputGroup hidden">
+                <p style="color:green"> Payment received &mdash; receipt #<span id="receiptId"></span> </p>
             </div>
 
-            <div class="inputGroup">
-                <h2> Recent Activity </h2>
-                <p> No recent transactions. </p>
+            <!-- exactly one of the next two sections is unhidden by dashboard.js,
+                 depending on whether /subscriptions/me returns a subscription -->
+            <div id="myPlanSection" class="inputGroup hidden">
+                <h2> My Plan </h2>
+                <p> <span id="planName"></span> </p>
+                <p> <span id="planPrice"></span> </p>
+                <p> Member since <span id="planSince"></span> </p>
+                <p> <a href="/plans.html">Change plan</a> </p>
+            </div>
+
+            <div id="pickPlanPrompt" class="inputGroup hidden">
+                <h2> No plan yet </h2>
+                <p> You don't have a plan. Pick one to get started! </p>
+                <p> <a href="/plans.html">Pick a plan</a> </p>
             </div>
 
             <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->
@@ -46,3 +57,4 @@
         </p>
     </footer>
 </body>
+</html>

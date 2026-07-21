@@ -35,7 +35,7 @@ async function registerUser() {
             return;
         }
         
-        window.location.href = '../views/dashboard.html';
+        window.location.href = '/dashboard';
     } catch (e) {
         console.error(e);
     } finally {

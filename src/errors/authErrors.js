@@ -36,3 +36,11 @@ export class InvalidTokenError extends Error {
     this.statusCode = 401;
   }
 }
+
+export class MissingTokenError extends Error {
+  constructor(options) {
+    super("Not logged in", options);
+    this.name = "MissingToken";
+    this.statusCode = 401;
+  }
+}
