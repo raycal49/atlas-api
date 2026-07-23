@@ -3,7 +3,9 @@ import argon2 from 'argon2';
 import { createAuthServices } from '../services/authServices';
 import { InvalidCredentialError, ExistingAccountError } from '../errors/authErrors';
 
-vi.mock('argon2');
+vi.mock('argon2', () => ({
+  default: { verify: vi.fn(), hash: vi.fn(), argon2id: 2 }
+}));
 
 vi.mock('jose', () => {
   class SignJWT {
@@ -33,7 +35,8 @@ describe('Auth Service', async () => {
             const { service, authRepo } = setup();
             authRepo.findUserCredentials.mockResolvedValue(undefined);
             await expect(service.authenticateUser('Ray', 'Password123!')).rejects.toThrow(InvalidCredentialError);
-        }),     
+        }),
+
         it('Input user password does not match stored hash so InvalidCredentialError is thrown', async () => {
             const { service, authRepo } = setup();
             authRepo.findUserCredentials.mockResolvedValue({user_id:'14128a55-1ce9', hash:'stored_hash'});
@@ -41,6 +44,7 @@ describe('Auth Service', async () => {
             await expect(service.authenticateUser('Ray', 'Password123!')).rejects.toThrow(InvalidCredentialError);
             expect(argon2.verify).toHaveBeenCalledWith('stored_hash', 'Password123!');
         }),
+
         it('Input user password matches stored hash so a token is issued, signed, then returned', async () => {
             const { service, authRepo } = setup();
             authRepo.findUserCredentials.mockResolvedValue({user_id:'14128a55-1ce9', hash:'stored_hash'});
@@ -60,6 +64,7 @@ describe('Auth Service', async () => {
 
             await expect(service.addUser({username:'ray123', password:'Password123!', email: 'myemail123@gmail.com'})).rejects.toThrow(ExistingAccountError);
         }),
+
         it('Input user credentials are valid so their account is created and a signed token is returned', async () => {
             const { service, authRepo } = setup();
             authRepo.checkUserExists.mockResolvedValue(false);
