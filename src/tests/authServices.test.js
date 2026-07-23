@@ -1,4 +1,4 @@
-import { describe, it, expect, vi} from 'vitest';
+import { beforeEach, describe, it, expect, vi} from 'vitest';
 import argon2 from 'argon2';
 import { createAuthServices } from '../services/authServices';
 import { InvalidCredentialError, ExistingAccountError } from '../errors/authErrors';
@@ -28,6 +28,8 @@ const setup = () => {
 
     return { service, authRepo}
 }
+
+beforeEach(() => { vi.clearAllMocks(); });
 
 describe('Auth Service', async () => {
     describe('User inputs credentials and attempts to login', async () => {
