@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name= "author" content = "Raymond Calderon">
+    <meta name="author" content="Raymond Calderon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/stylesheets/style.css">
     <script src="/js/plans.js" defer></script>
     <title>Phone Co</title>
@@ -11,44 +12,59 @@
 
 <body>
     <header>
-        <nav>
-            <a href="index.html"> Home </a>
-            <a href="/dashboard"> Dashboard </a>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Phone Co</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navLinks"
+                        aria-controls="navLinks" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navLinks">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+                    </ul>
+                </div>
+            </div>
         </nav>
     </header>
 
-    <main id="loginPageBody">
-        <h1> Pick a plan </h1>
-        <p class="subtitle"> Choose the plan that fits you. </p>
-
-        <!-- plans.js fills this with one card per plan fetched from /plans -->
-        <div id="planList"></div>
-
-        <!-- hidden until a plan is chosen -->
-        <form id="paymentForm" class="card hidden">
-            <h2> Subscribe to <span id="chosenPlanName"></span> </h2>
-
-            <div class="inputGroup">
-                <label for="card_number"> Card number: </label>
-                <input type="text" id="card_number" name="card_number" placeholder="Enter card number"
-                       inputmode="numeric" minlength="13" maxlength="19" required />
+    <main>
+        <div class="container py-5">
+            <div class="text-center mb-4">
+                <h1 class="h2">Pick a plan</h1>
+                <p class="subtitle text-muted">Choose the plan that fits you.</p>
             </div>
 
-            <span class=invisible id="card_number-error" style="color:red" aria-live="polite"> Card number must be 13-19 digits</span>
+            <div id="planList" class="row row-cols-1 row-cols-md-3 g-4 justify-content-center"></div>
 
-            <!-- form-level errors (already subscribed, server trouble) -- text is filled in by plans.js -->
-            <span class=invisible id="form-error" style="color:red" aria-live="polite"> </span>
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-6 col-lg-4">
+                    <form id="paymentForm" class="card shadow-sm hidden">
+                        <div class="card-body">
+                            <h2 class="h4 mb-3">Subscribe to <span id="chosenPlanName"></span></h2>
 
-            <div class="inputGroup">
-                <button id="submit-button" type="submit"> Pay </button>
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Card number</label>
+                                <input type="text" class="form-control" id="card_number" name="card_number"
+                                       placeholder="Enter card number" inputmode="numeric" minlength="13" maxlength="19" required />
+                                <span class="invisible text-danger small" id="card_number-error" aria-live="polite">Card number must be 13-19 digits</span>
+                            </div>
+
+                            <span class="invisible text-danger small d-block mb-2" id="form-error" aria-live="polite"></span>
+
+                            <button id="submit-button" type="submit" class="btn btn-primary w-100">Pay</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+        </div>
     </main>
 
-    <footer>
-        <p >
-            <a href="about.html"> About us </a>
-        </p>
+    <footer class="text-center py-3 text-muted">
+        <p class="mb-0"><a href="about.html">About us</a></p>
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

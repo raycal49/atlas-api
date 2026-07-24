@@ -1,17 +1,49 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Raymond Calderon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <title>Phone Co</title>
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Phone Co</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navLinks"
+                        aria-controls="navLinks" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navLinks">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-  <a href="/users/1">View user 1</a>
-  <br>
-  <a href="login.html"> Login </a>
+    <main>
+        <div class="container py-5 text-center">
+            <h1 class="display-5 fw-bold">Welcome to Phone Co</h1>
+            <p class="lead text-muted">Simple phone plans, no surprises. Sign in to manage yours.</p>
+            <div class="mt-4">
+                <a href="login.html" class="btn btn-primary btn-lg me-2">Login</a>
+                <a href="register.html" class="btn btn-outline-secondary btn-lg">Register</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-3 text-muted">
+        <p class="mb-0"><a href="about.html">About us</a></p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

@@ -1,5 +1,14 @@
 const form = document.querySelector("#userinfo");
 const submitBtn = form.querySelector('button[type="submit"]');
+const confirmError = document.querySelector("#confirm_password-error");
+
+const passwordsMatch = () => {
+    const password = document.querySelector("#password").value;
+    const confirm  = document.querySelector("#confirm_password").value;
+    const ok = password === confirm;
+    confirmError.classList.toggle("invisible", ok);  // show the error only when they differ
+    return ok;
+}
 
 const showFieldErrors = (fieldErrors) => {
     const fields = ["username", "email", "password"];
@@ -45,5 +54,6 @@ async function registerUser() {
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!passwordsMatch()) return;
     await registerUser();
 });

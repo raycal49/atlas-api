@@ -39,25 +39,38 @@ const choosePlan = (planName) => {
 // treated as text, never as HTML
 const renderPlans = (plans) => {
     for (const plan of plans) {
-        const card = document.createElement("section");
-        card.className = "card";
+        // Bootstrap card grid: each plan is a column with a card inside
+        const col = document.createElement("div");
+        col.className = "col";
+
+        const card = document.createElement("div");
+        card.className = "card h-100 shadow-sm";
+
+        const body = document.createElement("div");
+        body.className = "card-body d-flex flex-column";
 
         const name = document.createElement("h2");
+        name.className = "card-title h5";
         name.textContent = plan.plan_name;
 
         const price = document.createElement("p");
+        price.className = "card-text fw-bold";
         price.textContent = `$${plan.price_per_month} / month`;
 
         const description = document.createElement("p");
+        description.className = "card-text text-muted";
         description.textContent = plan.description ?? "";
 
         const chooseBtn = document.createElement("button");
         chooseBtn.type = "button";
+        chooseBtn.className = "btn btn-primary mt-auto";
         chooseBtn.textContent = "Choose";
         chooseBtn.addEventListener("click", () => choosePlan(plan.plan_name));
 
-        card.append(name, price, description, chooseBtn);
-        planList.append(card);
+        body.append(name, price, description, chooseBtn);
+        card.append(body);
+        col.append(card);
+        planList.append(col);
     }
 }
 
