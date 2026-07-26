@@ -56,6 +56,48 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
+  // the billing cycle the user is currently inside: the most recent payment's
+  // period_start, and the same date a month later (when the next bill lands
+  // and the usage quotas reset)
+  findCurrentPeriod: async (subscriptionId) => {
+    const rows = await sql`
+      SELECT period_start,
+             (period_start + interval '1 month')::date AS next_bill_due
+      FROM payment_history
+      WHERE subscription_id = ${subscriptionId}
+      ORDER BY period_start DESC
+      LIMIT 1`;
+    return rows[0];
+  },
+
+  // which APIs a plan grants, and how many calls each one allows.
+  // a product with no row here is not part of the plan at all
+  findPlanApiLimits: async (planId) => {
+    return await sql`
+      SELECT ap.api_product_id,
+             ap.api_name,
+             l.monthly_limit::int AS monthly_limit
+      FROM plan_api_limits l
+      JOIN api_products ap ON ap.api_product_id = l.api_product_id
+      WHERE l.plan_id = ${planId}
+      ORDER BY ap.api_name`;
+  },
+
+  // calls made in the current cycle, per API. products the user never called
+  // are simply absent from the result -- the service fills those in as 0.
+  // ::int because COUNT() and monthly_limit are int8, which postgres.js hands
+  // back as strings to protect precision
+  countUsageByProduct: async (userId, periodStart) => {
+    return await sql`
+      SELECT api_product_id,
+             COUNT(*)::int AS calls_used
+      FROM api_usage
+      WHERE user_id = ${userId}
+        AND used_at >= ${periodStart}::date
+        AND used_at <  ${periodStart}::date + interval '1 month'
+      GROUP BY api_product_id`;
+  },
+
   subscribeToPlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
     try {
       return await sql.begin((sql) =>

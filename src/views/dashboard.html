@@ -49,6 +49,7 @@
                                 <p class="mb-1"><span id="planName"></span></p>
                                 <p class="mb-1"><span id="planPrice"></span></p>
                                 <p class="mb-1">Member since <span id="planSince"></span></p>
+                                <p class="mb-1">Next bill due <span id="nextBillDue"></span></p>
                                 <p><a href="/plans.html">Change plan</a></p>
                             </div>
 
@@ -56,6 +57,14 @@
                                 <h2 class="h5">No plan yet</h2>
                                 <p>You don't have a plan. Pick one to get started!</p>
                                 <p><a href="/plans.html">Pick a plan</a></p>
+                            </div>
+
+                            <!-- unhidden alongside #myPlanSection; dashboard.js builds one
+                                 row per API the plan grants -->
+                            <div id="usageSection" class="hidden">
+                                <hr>
+                                <h2 class="h5">API Usage This Period</h2>
+                                <div id="usageList"></div>
                             </div>
 
                             <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->

@@ -12,6 +12,14 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ subscription });
   },
 
+  getMyUsage: async (req, res) => {
+    const usage = await userServices.getUsageSummary(req.tokenInfo.id);
+
+    // null when unsubscribed, same as getMySubscription -- the dashboard shows
+    // the "pick a plan" prompt instead of a usage breakdown
+    return res.status(200).json({ usage });
+  },
+
   selectPlan: async (req, res) => {
     // card_number is already just the last 4 digits (schema transform)
     const { plan_name, card_number } = req.body;

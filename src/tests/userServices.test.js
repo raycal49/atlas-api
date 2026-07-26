@@ -9,6 +9,9 @@ const setup = () => {
         findActiveSubscription: vi.fn(),
         subscribeToPlan: vi.fn(),
         changePlan: vi.fn(),
+        findCurrentPeriod: vi.fn(),
+        findPlanApiLimits: vi.fn(),
+        countUsageByProduct: vi.fn(),
     }
 
     const service = createUserServices(userRepo);
@@ -92,5 +95,88 @@ describe('User Service', async () => {
             expect(result).toStrictEqual({plan_id:'plan ids', plan_name:'plan names', price_per_month: 'prices per month', description:'descriptions'});
         })
 
+    })
+
+    describe('we build the usage summary for the dashboard', async () => {
+        // gives every test the same subscribed user on a plan with two APIs
+        const arrangeSubscribedUser = (userRepo) => {
+            userRepo.findActiveSubscription.mockResolvedValue({
+                subscription_id: '417e-9664', plan_id: '06188b55-8cf3', started_at: '2026-06-15',
+            });
+            userRepo.findCurrentPeriod.mockResolvedValue({
+                period_start: '2026-07-15', next_bill_due: '2026-08-15',
+            });
+            userRepo.findPlanApiLimits.mockResolvedValue([
+                { api_product_id: 'api-1', api_name: 'Lookup', monthly_limit: 100 },
+                { api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50 },
+            ]);
+        }
+
+        it('user has no subscription, so no usage summary is returned', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findActiveSubscription.mockResolvedValue(undefined);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result).toBe(null);
+            expect(userRepo.countUsageByProduct).not.toHaveBeenCalled();
+        })
+
+        it('an api with usage this period reports its used and remaining calls', async () => {
+            const { service, userRepo } = setup();
+            arrangeSubscribedUser(userRepo);
+            userRepo.countUsageByProduct.mockResolvedValue([
+                { api_product_id: 'api-1', calls_used: 30 },
+                { api_product_id: 'api-2', calls_used: 50 },
+            ]);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.next_bill_due).toBe('2026-08-15');
+            expect(result.apis).toStrictEqual([
+                { api_product_id: 'api-1', api_name: 'Lookup', monthly_limit: 100, calls_used: 30, calls_remaining: 70 },
+                { api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50, calls_used: 50, calls_remaining: 0 },
+            ]);
+        })
+
+        // countUsageByProduct leaves untouched apis out of its result entirely,
+        // so the service is what has to put them back at 0
+        it('an api the plan grants but the user never called still appears, at zero', async () => {
+            const { service, userRepo } = setup();
+            arrangeSubscribedUser(userRepo);
+            userRepo.countUsageByProduct.mockResolvedValue([
+                { api_product_id: 'api-1', calls_used: 30 },
+            ]);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis).toHaveLength(2);
+            expect(result.apis[1]).toStrictEqual({
+                api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50,
+                calls_used: 0, calls_remaining: 50,
+            });
+        })
+
+        it('usage is counted from the current period start, not the subscription start', async () => {
+            const { service, userRepo } = setup();
+            arrangeSubscribedUser(userRepo);
+            userRepo.countUsageByProduct.mockResolvedValue([]);
+
+            await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(userRepo.countUsageByProduct).toHaveBeenCalledWith('79c7d0bd4b6a', '2026-07-15');
+        })
+
+        it('an api used past its limit reports zero remaining rather than a negative', async () => {
+            const { service, userRepo } = setup();
+            arrangeSubscribedUser(userRepo);
+            userRepo.countUsageByProduct.mockResolvedValue([
+                { api_product_id: 'api-1', calls_used: 130 },
+            ]);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].calls_remaining).toBe(0);
+        })
     })
 });
