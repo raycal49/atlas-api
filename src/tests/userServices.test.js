@@ -134,8 +134,14 @@ describe('User Service', async () => {
 
             expect(result.next_bill_due).toBe('2026-08-15');
             expect(result.apis).toStrictEqual([
-                { api_product_id: 'api-1', api_name: 'Lookup', monthly_limit: 100, calls_used: 30, calls_remaining: 70 },
-                { api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50, calls_used: 50, calls_remaining: 0 },
+                {
+                    api_product_id: 'api-1', api_name: 'Lookup', monthly_limit: 100,
+                    calls_used: 30, calls_remaining: 70, percent_used: 30, state: 'ok',
+                },
+                {
+                    api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50,
+                    calls_used: 50, calls_remaining: 0, percent_used: 100, state: 'critical',
+                },
             ]);
         })
 
@@ -153,7 +159,7 @@ describe('User Service', async () => {
             expect(result.apis).toHaveLength(2);
             expect(result.apis[1]).toStrictEqual({
                 api_product_id: 'api-2', api_name: 'Verify', monthly_limit: 50,
-                calls_used: 0, calls_remaining: 50,
+                calls_used: 0, calls_remaining: 50, percent_used: 0, state: 'ok',
             });
         })
 
@@ -177,6 +183,86 @@ describe('User Service', async () => {
             const result = await service.getUsageSummary('79c7d0bd4b6a');
 
             expect(result.apis[0].calls_remaining).toBe(0);
+        })
+    })
+
+    describe('we work out how close each api is to its limit', async () => {
+        // one api with a limit of 100, so calls_used reads directly as a percentage
+        const arrangeSingleApi = (userRepo, callsUsed, monthlyLimit = 100) => {
+            userRepo.findActiveSubscription.mockResolvedValue({
+                subscription_id: '417e-9664', plan_id: '06188b55-8cf3', started_at: '2026-06-15',
+            });
+            userRepo.findCurrentPeriod.mockResolvedValue({
+                period_start: '2026-07-15', next_bill_due: '2026-08-15',
+            });
+            userRepo.findPlanApiLimits.mockResolvedValue([
+                { api_product_id: 'api-1', api_name: 'Geocoding', monthly_limit: monthlyLimit },
+            ]);
+            userRepo.countUsageByProduct.mockResolvedValue(
+                callsUsed === 0 ? [] : [{ api_product_id: 'api-1', calls_used: callsUsed }]);
+        }
+
+        it('an unused api is ok at zero percent', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 0);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].percent_used).toBe(0);
+            expect(result.apis[0].state).toBe('ok');
+        })
+
+        it('an api just below the warning threshold is still ok', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 79);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].state).toBe('ok');
+        })
+
+        // the boundary itself counts as a warning, not the value above it
+        it('an api exactly at the warning threshold warns', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 80);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].percent_used).toBe(80);
+            expect(result.apis[0].state).toBe('warning');
+        })
+
+        it('an api at exactly its limit is critical', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 100);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].percent_used).toBe(100);
+            expect(result.apis[0].state).toBe('critical');
+        })
+
+        // a bar can't be drawn past its track, so overage clamps rather than
+        // reporting 130%
+        it('an api used past its limit clamps to one hundred percent', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 130);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].percent_used).toBe(100);
+            expect(result.apis[0].state).toBe('critical');
+        })
+
+        // dividing by a zero limit would give Infinity and break the bar width
+        it('an api with a zero limit reports zero percent rather than infinity', async () => {
+            const { service, userRepo } = setup();
+            arrangeSingleApi(userRepo, 5, 0);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.apis[0].percent_used).toBe(0);
+            expect(result.apis[0].state).toBe('ok');
         })
     })
 });

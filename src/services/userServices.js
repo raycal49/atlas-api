@@ -1,5 +1,20 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
 
+// when an API is close enough to its quota to warn about, and when it is spent.
+// these are product rules, not styling -- the same thresholds would decide
+// whether to send a "you're running low" email, so they live here rather than
+// in the browser
+const WARNING_AT = 80;
+const CRITICAL_AT = 100;
+
+// capped at 100 so an over-limit API can't report 130% (and overflow a bar);
+// the limit > 0 guard keeps a zero quota from dividing to Infinity
+const percentOf = (used, limit) =>
+  limit > 0 ? Math.min(Math.round((used / limit) * 100), 100) : 0;
+
+const stateFor = (percent) =>
+  percent >= CRITICAL_AT ? 'critical' : percent >= WARNING_AT ? 'warning' : 'ok';
+
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const plan = await userRepo.findActivePlanByName(planName);
@@ -49,6 +64,7 @@ export const createUserServices = (userRepo) => ({
     // countUsageByProduct can stay a plain COUNT with no outer join
     const apis = limits.map((limit) => {
       const callsUsed = usedByProduct.get(limit.api_product_id) ?? 0;
+      const percentUsed = percentOf(callsUsed, limit.monthly_limit);
 
       return {
         api_product_id: limit.api_product_id,
@@ -56,6 +72,8 @@ export const createUserServices = (userRepo) => ({
         monthly_limit: limit.monthly_limit,
         calls_used: callsUsed,
         calls_remaining: Math.max(limit.monthly_limit - callsUsed, 0),
+        percent_used: percentUsed,
+        state: stateFor(percentUsed),
       };
     });
 

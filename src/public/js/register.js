@@ -1,6 +1,13 @@
+import { postForm } from "./api.js";
+import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
+
 const form = document.querySelector("#userinfo");
 const submitBtn = form.querySelector('button[type="submit"]');
 const confirmError = document.querySelector("#confirm_password-error");
+
+// the inputs the server can send per-field errors back for. confirm_password is
+// checked here in the browser only, so it is not in this list
+const FIELDS = ["username", "email", "password"];
 
 const passwordsMatch = () => {
     const password = document.querySelector("#password").value;
@@ -10,43 +17,37 @@ const passwordsMatch = () => {
     return ok;
 }
 
-const showFieldErrors = (fieldErrors) => {
-    const fields = ["username", "email", "password"];
-
-    for (const field of fields) {
-        const span = document.querySelector(`#${field}-error`);
-        span.classList.toggle("invisible", !fieldErrors[field]);
-    }
-}
-
 async function registerUser() {
     submitBtn.disabled = true;
 
-    const body = new URLSearchParams(new FormData(form));
+    try {
+        const { ok, status, body } = await postForm("/auth/register", new FormData(form));
 
-        try {
-        const response = await fetch("/auth/register", {
-            method: form.method,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body,
-        });
-
-        const responseBody = await response.json();
-
-        console.log("The result of the server-side validation is: " + JSON.stringify(responseBody, null, 2));
-        // console.log("The result of the server-side validation is: " + JSON.stringify(responseBody.errors.password, null, 2));
-        console.log("Has the server-side validation failed? The answer is: " + (responseBody.status === "fail"));
-
-        if (responseBody.status === "fail") {
-            showFieldErrors(responseBody.errors);
+        // check success FIRST. this used to fall through to the redirect on any
+        // response that wasn't a validation failure, so a taken username sent the
+        // browser to /dashboard, which bounced it to the login page with no
+        // explanation at all
+        if (ok) {
+            window.location.href = '/dashboard';
             return;
         }
-        
-        window.location.href = '/dashboard';
+
+        if (status === 400 && body?.status === "fail") {
+            showFieldErrors(FIELDS, body.errors);
+            return;
+        }
+
+        // a taken username or email arrives as a bare JSON string -- show the
+        // server's own wording
+        if (status === 409) {
+            showFormError(body);
+            return;
+        }
+
+        showFormError("Something went wrong. Please try again.");
     } catch (e) {
         console.error(e);
+        showFormError("Something went wrong. Please try again.");
     } finally {
         submitBtn.disabled = false;
     }
@@ -54,6 +55,10 @@ async function registerUser() {
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    hideErrors(FIELDS);
     if (!passwordsMatch()) return;
     await registerUser();
 });
+
+// stale errors disappear as soon as the user starts fixing their input
+form.addEventListener("input", () => hideErrors(FIELDS));

@@ -1,36 +1,21 @@
+import { getJson, postForm } from "./api.js";
+import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
+
 const planList = document.querySelector("#planList");
 const paymentForm = document.querySelector("#paymentForm");
 const chosenPlanName = document.querySelector("#chosenPlanName");
 const submitBtn = paymentForm.querySelector('button[type="submit"]');
-const formError = document.querySelector("#form-error");
+
+// the inputs this page can get per-field errors back for
+const FIELDS = ["card_number"];
 
 // remembered when the user clicks a Choose button, sent on submit
 let selectedPlan = null;
 
-const showFieldErrors = (fieldErrors) => {
-    const fields = ["card_number"];
-
-    for (const field of fields) {
-        const span = document.querySelector(`#${field}-error`);
-        span.classList.toggle("invisible", !fieldErrors[field]);
-    }
-}
-
-// 409s and 500s are one message for the whole form, not tied to a field
-const showFormError = (message) => {
-    formError.textContent = message ?? "";
-    formError.classList.toggle("invisible", !message);
-}
-
-const hideAllErrors = () => {
-    showFieldErrors({});
-    showFormError(null);
-}
-
 const choosePlan = (planName) => {
     selectedPlan = planName;
     chosenPlanName.textContent = planName;
-    hideAllErrors();
+    hideErrors(FIELDS);
     paymentForm.classList.remove("hidden");
     paymentForm.scrollIntoView({ behavior: "smooth" });
 }
@@ -38,6 +23,8 @@ const choosePlan = (planName) => {
 // build each card with createElement/textContent so plan data is always
 // treated as text, never as HTML
 const renderPlans = (plans) => {
+    const fragment = document.createDocumentFragment();
+
     for (const plan of plans) {
         // Bootstrap card grid: each plan is a column with a card inside
         const col = document.createElement("div");
@@ -70,21 +57,19 @@ const renderPlans = (plans) => {
         body.append(name, price, description, chooseBtn);
         card.append(body);
         col.append(card);
-        planList.append(col);
+        fragment.append(col);
     }
+
+    // replaceChildren so a re-render swaps the list rather than doubling it
+    planList.replaceChildren(fragment);
 }
 
 async function loadPlans() {
     try {
-        const response = await fetch("/plans");
+        const data = await getJson("/plans");
+        if (!data) return;
 
-        if (!response.ok) {
-            showFormError("Could not load plans. Please refresh.");
-            return;
-        }
-
-        const { plans } = await response.json();
-        renderPlans(plans);
+        renderPlans(data.plans);
     } catch (e) {
         console.error(e);
         showFormError("Could not load plans. Please refresh.");
@@ -94,44 +79,33 @@ async function loadPlans() {
 async function payForPlan() {
     submitBtn.disabled = true;
 
-    const body = new URLSearchParams({
-        plan_name: selectedPlan,
-        card_number: document.querySelector("#card_number").value,
-    });
-
     try {
-        const response = await fetch("/subscriptions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body,
+        const { ok, status, body } = await postForm("/subscriptions", {
+            plan_name: selectedPlan,
+            card_number: document.querySelector("#card_number").value,
         });
 
-        if (response.status === 201) {
-            const { paymentId } = await response.json();
+        if (ok) {
             // dashboard shows the receipt banner when it sees ?paid=
-            window.location.href = "/dashboard?paid=" + paymentId;
+            window.location.href = "/dashboard?paid=" + body.paymentId;
             return;
         }
 
-        if (response.status === 401) {
+        if (status === 401) {
             // not logged in (or session expired) -- payment needs an account
             window.location.href = "/login.html";
             return;
         }
 
-        const responseBody = await response.json();
-
-        if (response.status === 400 && responseBody.status === "fail") {
-            showFieldErrors(responseBody.errors);
+        if (status === 400 && body?.status === "fail") {
+            showFieldErrors(FIELDS, body.errors);
             return;
         }
 
         // domain errors (already subscribed, unknown plan) arrive as a plain
         // JSON string -- show the server's own message
-        if (response.status === 409 || response.status === 400) {
-            showFormError(responseBody);
+        if (status === 409 || status === 400) {
+            showFormError(body);
             return;
         }
 
@@ -146,11 +120,11 @@ async function payForPlan() {
 
 paymentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    hideAllErrors();
+    hideErrors(FIELDS);
     await payForPlan();
 });
 
 // stale errors disappear as soon as the user starts fixing their input
-paymentForm.addEventListener("input", hideAllErrors);
+paymentForm.addEventListener("input", () => hideErrors(FIELDS));
 
 loadPlans();

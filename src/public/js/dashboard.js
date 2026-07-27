@@ -1,15 +1,19 @@
+import { getJson } from "./api.js";
+import { showFormError } from "./ui.js";
+
 const logoutBtn = document.querySelector("#logout-button");
-const formError = document.querySelector("#form-error");
 const myPlanSection = document.querySelector("#myPlanSection");
 const pickPlanPrompt = document.querySelector("#pickPlanPrompt");
 const paidBanner = document.querySelector("#paidBanner");
 const usageSection = document.querySelector("#usageSection");
 const usageList = document.querySelector("#usageList");
 
-const showFormError = (message) => {
-    formError.textContent = message ?? "";
-    formError.classList.toggle("invisible", !message);
-}
+// the server decides which state an API is in; this only maps that decision to
+// a Bootstrap colour. Phase 2 replaces these with CSS driven off data-state
+const STATE_CLASS = {
+    warning: "bg-warning",
+    critical: "bg-danger",
+};
 
 async function logoutUser() {
     logoutBtn.disabled = true;
@@ -41,13 +45,19 @@ const renderUsage = (apis) => {
         const empty = document.createElement("p");
         empty.className = "text-muted mb-0";
         empty.textContent = "Your plan doesn't include any APIs yet.";
-        usageList.append(empty);
+        usageList.replaceChildren(empty);
         return;
     }
+
+    // rows are assembled off-document and attached in one go: N appends to a live
+    // node means N chances to trigger layout, and this list grows with the plan
+    const fragment = document.createDocumentFragment();
 
     for (const api of apis) {
         const row = document.createElement("div");
         row.className = "mb-3";
+        // the semantic state, for CSS to style -- JS never picks a colour
+        row.dataset.state = api.state;
 
         const name = document.createElement("p");
         name.className = "mb-1 fw-semibold";
@@ -58,29 +68,30 @@ const renderUsage = (apis) => {
         counts.textContent =
             `${api.calls_used} / ${api.monthly_limit} calls used — ${api.calls_remaining} left`;
 
-        // capped at 100 so a maxed-out API can't overflow its track
-        const percent = api.monthly_limit > 0
-            ? Math.min(Math.round((api.calls_used / api.monthly_limit) * 100), 100)
-            : 0;
-
         const track = document.createElement("div");
         track.className = "progress";
         track.setAttribute("role", "progressbar");
         track.setAttribute("aria-label", `${api.api_name} usage`);
-        track.setAttribute("aria-valuenow", percent);
+        track.setAttribute("aria-valuenow", api.percent_used);
         track.setAttribute("aria-valuemin", "0");
         track.setAttribute("aria-valuemax", "100");
 
         const bar = document.createElement("div");
         bar.className = "progress-bar";
-        if (percent >= 100) bar.classList.add("bg-danger");
-        else if (percent >= 80) bar.classList.add("bg-warning");
-        bar.style.width = `${percent}%`;
+
+        const stateClass = STATE_CLASS[api.state];
+        if (stateClass) bar.classList.add(stateClass);
+
+        bar.style.width = `${api.percent_used}%`;
 
         track.append(bar);
         row.append(name, counts, track);
-        usageList.append(row);
+        fragment.append(row);
     }
+
+    // replaceChildren, not append: rendering twice must produce the same list,
+    // not two of everything
+    usageList.replaceChildren(fragment);
 }
 
 // the dashboard never assumes how you got here -- it asks the server what is
@@ -89,31 +100,22 @@ const renderUsage = (apis) => {
 // it unhides whichever section based off whether or not you have a plan or not
 async function loadDashboard() {
     try {
-        const [subResponse, plansResponse, usageResponse] = await Promise.all([
-            fetch("/subscriptions/me"),
-            fetch("/plans"),
-            fetch("/usage/me"),
+        const [subData, plansData, usageData] = await Promise.all([
+            getJson("/subscriptions/me"),
+            getJson("/plans"),
+            getJson("/usage/me"),
         ]);
 
-        // if we have an auth error, redirect to login.html
-        if (subResponse.status === 401) {
-            window.location.href = "/login.html";
-            return;
-        }
+        // a null means getJson saw a 401 and the browser is already navigating
+        // to the login page -- there is nothing left to render
+        if (!subData || !plansData || !usageData) return;
 
-        // if we, for whatever reason, just don't get any HTTP success codes, then just show generic error and
-        // stop loading the dashboard
-        if (!subResponse.ok || !plansResponse.ok || !usageResponse.ok) {
-            showFormError("Could not load your dashboard. Please refresh.");
-            return;
-        }
-
-        const { subscription } = await subResponse.json();
-        const { plans } = await plansResponse.json();
-        const { usage } = await usageResponse.json();
+        const { subscription } = subData;
+        const { plans } = plansData;
+        const { usage } = usageData;
 
         // subscription response is supposed to hold the user's subscription
-        // if it doesn't, then we reveal pick plan prompt and return from the function here 
+        // if it doesn't, then we reveal pick plan prompt and return from the function here
         if (!subscription) {
             pickPlanPrompt.classList.remove("hidden");
             return;
