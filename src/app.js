@@ -52,6 +52,10 @@ app.get('/payments', authMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'payments.html'));
 });
 
+app.get('/usage', authMiddleware, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'usage.html'));
+});
+
 app.use((err, req, res, next) => {
   // a browser NAVIGATING to a protected page should land on login, not see JSON.
   // fetch sends Accept: */* which resolves to 'json' here; a real page

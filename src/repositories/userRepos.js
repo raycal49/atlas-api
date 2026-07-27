@@ -112,6 +112,28 @@ export const createUserRepository = (sql) => ({
       ORDER BY ap.api_name`;
   },
 
+  // one page of individual calls, newest first.
+  //
+  // keyset pagination, not OFFSET: api_usage_id only ever increases, so "the next
+  // page is the rows below this id" is an index seek no matter how deep you go,
+  // where OFFSET 10000 makes postgres walk and discard ten thousand rows first.
+  // it also can't skip or repeat a row when new calls arrive mid-paging.
+  //
+  // the IS NULL branch handles the first page, so there is one query rather than
+  // two nearly identical ones
+  findUsageLog: async (userId, before, limit) => {
+    return await sql`
+      SELECT u.api_usage_id,
+             u.used_at,
+             ap.api_name
+      FROM api_usage u
+      JOIN api_products ap ON ap.api_product_id = u.api_product_id
+      WHERE u.user_id = ${userId}
+        AND (${before}::bigint IS NULL OR u.api_usage_id < ${before}::bigint)
+      ORDER BY u.api_usage_id DESC
+      LIMIT ${limit}`;
+  },
+
   // calls made in the current cycle, per API. products the user never called
   // are simply absent from the result -- the service fills those in as 0.
   // ::int because COUNT() and monthly_limit are int8, which postgres.js hands

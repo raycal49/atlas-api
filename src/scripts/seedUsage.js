@@ -148,10 +148,19 @@ const seedPlanLimits = async (sql, planIds, productIds) => {
   return rows.length;
 };
 
+// the call log pages with "give me rows below this id for this user", so this is
+// the index that keeps it an index seek instead of a scan. IF NOT EXISTS makes it
+// safe to run on every seed
+const ensureUsageIndex = (sql) => sql`
+  CREATE INDEX IF NOT EXISTS api_usage_user_id_idx
+    ON api_usage (user_id, api_usage_id DESC)`;
+
 const seedCatalog = async (sql) => {
   const productIds = await seedApiProducts(sql);
   const planIds = await seedPlans(sql);
   const limitCount = await seedPlanLimits(sql, planIds, productIds);
+
+  await ensureUsageIndex(sql);
 
   console.log(
     `Catalog: ${API_PRODUCTS.length} API products, ${PLANS.length} plans, ` +

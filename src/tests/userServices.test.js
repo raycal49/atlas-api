@@ -14,6 +14,7 @@ const setup = () => {
         countUsageByProduct: vi.fn(),
         findPaymentHistory: vi.fn(),
         findPlanById: vi.fn(),
+        findUsageLog: vi.fn(),
     }
 
     const service = createUserServices(userRepo);
@@ -429,6 +430,83 @@ describe('User Service', async () => {
 
             expect(result.upcoming).toBe(null);
             expect(result.payments).toStrictEqual([]);
+        })
+    })
+
+    describe('we page through the call log', async () => {
+        // ids descend, the way the repository returns them
+        const callsFrom = (highestId, count) =>
+            Array.from({ length: count }, (_, i) => ({
+                api_usage_id: String(highestId - i),
+                used_at: '2026-07-20T10:00:00.000Z',
+                api_name: 'Geocoding',
+            }));
+
+        it('asks for one row more than the caller wants, so it can tell if another page exists', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue(callsFrom(500, 3));
+
+            await service.getUsageLog('79c7d0bd4b6a', undefined, 50);
+
+            expect(userRepo.findUsageLog).toHaveBeenCalledWith('79c7d0bd4b6a', null, 51);
+        })
+
+        // the extra row is a probe, not content -- it must not reach the client
+        it('trims the probe row and hands back a cursor when a page is full', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue(callsFrom(500, 4));
+
+            const result = await service.getUsageLog('79c7d0bd4b6a', undefined, 3);
+
+            expect(result.calls).toHaveLength(3);
+            expect(result.calls.at(-1).api_usage_id).toBe('498');
+            // paging resumes below the last row actually shown, so 497 -- the probe
+            // -- is the first row of the next page rather than being skipped
+            expect(result.next_before).toBe('498');
+        })
+
+        it('reports no cursor once the last page comes back short', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue(callsFrom(500, 2));
+
+            const result = await service.getUsageLog('79c7d0bd4b6a', undefined, 3);
+
+            expect(result.calls).toHaveLength(2);
+            expect(result.next_before).toBe(null);
+        })
+
+        it('has no cursor and no calls when the log is empty', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue([]);
+
+            const result = await service.getUsageLog('79c7d0bd4b6a', undefined, 50);
+
+            expect(result.calls).toStrictEqual([]);
+            expect(result.next_before).toBe(null);
+        })
+
+        it('passes a cursor straight through to the repository', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue([]);
+
+            await service.getUsageLog('79c7d0bd4b6a', '498', 50);
+
+            expect(userRepo.findUsageLog).toHaveBeenCalledWith('79c7d0bd4b6a', '498', 51);
+        })
+
+        // api_usage_id is an int8 and can outgrow Number.MAX_SAFE_INTEGER, so the
+        // cursor has to survive as a string rather than becoming a JS number
+        it('keeps the cursor a string', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLog.mockResolvedValue([
+                { api_usage_id: '9007199254740993', used_at: '2026-07-20T10:00:00.000Z', api_name: 'Geocoding' },
+                { api_usage_id: '9007199254740992', used_at: '2026-07-20T10:00:00.000Z', api_name: 'Geocoding' },
+            ]);
+
+            const result = await service.getUsageLog('79c7d0bd4b6a', undefined, 1);
+
+            expect(result.next_before).toBe('9007199254740993');
+            expect(typeof result.next_before).toBe('string');
         })
     })
 });

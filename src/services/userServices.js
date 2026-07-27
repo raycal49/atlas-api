@@ -58,6 +58,24 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllActivePlans();
   },
 
+  // one page of the call log, plus the cursor for the page after it.
+  //
+  // asks the repository for one row more than the caller wants: if that extra row
+  // comes back there is another page, and the client gets a cursor. that is one
+  // query instead of a second COUNT, and it never disagrees with the rows shown
+  getUsageLog: async (userId, before, limit) => {
+    const rows = await userRepo.findUsageLog(userId, before ?? null, limit + 1);
+
+    const hasMore = rows.length > limit;
+    const calls = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      calls,
+      // null means this was the last page
+      next_before: hasMore ? calls[calls.length - 1].api_usage_id : null,
+    };
+  },
+
   // past payments plus the charge that is coming. both halves live in one
   // response so the page needs a single request rather than stitching three
   // together in the browser
