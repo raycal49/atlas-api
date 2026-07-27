@@ -8,12 +8,39 @@ const paidBanner = document.querySelector("#paidBanner");
 const usageSection = document.querySelector("#usageSection");
 const usageList = document.querySelector("#usageList");
 
-// the server decides which state an API is in; this only maps that decision to
-// a Bootstrap colour. Phase 2 replaces these with CSS driven off data-state
-const STATE_CLASS = {
-    warning: "bg-warning",
-    critical: "bg-danger",
+// the server decides which state an API is in; this maps that decision onto
+// Bootstrap's own tokens. the -bg-subtle variables are the same hue as the solid
+// one, a few steps lighter, and Bootstrap redefines them for dark mode -- which
+// is exactly the "track is a lighter step of the fill's own ramp" rule, already
+// themed, with no CSS from us
+const STATE = {
+    ok: {
+        fill: "var(--bs-primary)",
+        track: "var(--bs-primary-bg-subtle)",
+    },
+    warning: {
+        fill: "var(--bs-warning)",
+        track: "var(--bs-warning-bg-subtle)",
+        badge: "#warningBadge",
+    },
+    critical: {
+        fill: "var(--bs-danger)",
+        track: "var(--bs-danger-bg-subtle)",
+        badge: "#criticalBadge",
+    },
 };
+
+// a calendar date rendered in UTC -- these are dates, not instants, so using the
+// local clock would slide them a day for anyone west of UTC
+const monthDay = (value) =>
+    new Date(value).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" });
+
+const periodLabel = (start, end) => {
+    if (!start || !end) return "";
+
+    const year = new Date(end).toLocaleDateString(undefined, { timeZone: "UTC", year: "numeric" });
+    return `${monthDay(start)} – ${monthDay(end)}, ${year}`;
+}
 
 async function logoutUser() {
     logoutBtn.disabled = true;
@@ -52,11 +79,8 @@ const renderKpis = (usage, plan) => {
     document.querySelector("#planName").textContent = plan?.plan_name ?? "(plan no longer offered)";
     document.querySelector("#planPrice").textContent = plan ? `$${plan.price_per_month} / month` : "";
 
-    // next_bill_due is a calendar date, not an instant -- rendering it in UTC
-    // stops it slipping to the previous day for users west of UTC
     document.querySelector("#nextBillDue").textContent = usage.next_bill_due
-        ? new Date(usage.next_bill_due).toLocaleDateString(undefined,
-            { timeZone: "UTC", month: "short", day: "numeric" })
+        ? monthDay(usage.next_bill_due)
         : "—";
 
     document.querySelector("#nextBillIn").textContent = daysLabel(usage.days_until_next_bill);
@@ -83,19 +107,32 @@ const renderUsage = (apis) => {
     const fragment = document.createDocumentFragment();
 
     for (const api of apis) {
+        const state = STATE[api.state] ?? STATE.ok;
+
         const row = document.createElement("div");
         row.className = "mb-3";
-        // the semantic state, for CSS to style -- JS never picks a colour
         row.dataset.state = api.state;
 
-        const name = document.createElement("p");
-        name.className = "mb-1 fw-semibold";
+        // name on the left, counts on the right, sharing a baseline
+        const head = document.createElement("div");
+        head.className = "d-flex justify-content-between align-items-baseline gap-2 mb-1";
+
+        const name = document.createElement("span");
+        name.className = "fw-semibold";
         name.textContent = api.api_name;
 
-        const counts = document.createElement("p");
-        counts.className = "mb-1 small text-body-secondary";
-        counts.textContent =
-            `${api.calls_used} / ${api.monthly_limit} calls used — ${api.calls_remaining} left`;
+        // status is never colour alone: warning and critical carry a written
+        // label and an icon, so the state survives colourblindness and greyscale
+        if (state.badge) {
+            const badge = document.querySelector(state.badge).content.firstElementChild.cloneNode(true);
+            badge.classList.add("ms-2");
+            name.append(badge);
+        }
+
+        const counts = document.createElement("span");
+        counts.className = "small text-body-secondary text-nowrap";
+        counts.textContent = `${formatCount(api.calls_used)} / ${formatCount(api.monthly_limit)}` +
+            ` · ${formatCount(api.calls_remaining)} left`;
 
         const track = document.createElement("div");
         track.className = "progress";
@@ -104,17 +141,21 @@ const renderUsage = (apis) => {
         track.setAttribute("aria-valuenow", api.percent_used);
         track.setAttribute("aria-valuemin", "0");
         track.setAttribute("aria-valuemax", "100");
+        // restyle the component by setting its own variables rather than writing
+        // rules for it -- these are the two Bootstrap already uses internally
+        track.style.setProperty("--bs-progress-height", ".625rem");
+        track.style.setProperty("--bs-progress-bg", state.track);
 
+        // rounded-end is a Bootstrap utility: square where the bar grows from,
+        // rounded at the data end
         const bar = document.createElement("div");
-        bar.className = "progress-bar";
-
-        const stateClass = STATE_CLASS[api.state];
-        if (stateClass) bar.classList.add(stateClass);
-
+        bar.className = "progress-bar rounded-end";
+        bar.style.setProperty("--bs-progress-bar-bg", state.fill);
         bar.style.width = `${api.percent_used}%`;
 
+        head.append(name, counts);
         track.append(bar);
-        row.append(name, counts, track);
+        row.append(head, track);
         fragment.append(row);
     }
 
@@ -162,6 +203,10 @@ async function loadDashboard() {
         // surprise here can't blank out the plan details we just rendered
         if (usage) {
             renderKpis(usage, plan);
+
+            document.querySelector("#usagePeriod").textContent =
+                periodLabel(usage.period_start, usage.next_bill_due);
+
             renderUsage(usage.apis);
             usageSection.classList.remove("d-none");
         }

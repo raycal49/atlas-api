@@ -94,9 +94,37 @@
                              row per API the plan grants -->
                         <div id="usageSection" class="d-none">
                             <hr>
-                            <h2 class="h5">API Usage This Period</h2>
+                            <h2 class="h5 mb-0">API Usage</h2>
+                            <!-- the dates the numbers below cover, so "4,100 calls" has a
+                                 timeframe attached -->
+                            <p class="small text-body-secondary" id="usagePeriod"></p>
                             <div id="usageList"></div>
                         </div>
+
+                        <!-- status badges, cloned by dashboard.js. keeping the markup here
+                             means the SVGs stay readable instead of becoming createElementNS
+                             calls, and the icon+label pairing is visible in the HTML -->
+                        <template id="warningBadge">
+                            <span class="badge text-bg-warning d-inline-flex align-items-center gap-1">
+                                <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M8 1.6 15 14H1L8 1.6Z" fill="none" stroke="currentColor"
+                                          stroke-width="1.7" stroke-linejoin="round"/>
+                                    <path d="M8 6.2v3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                    <circle cx="8" cy="11.9" r="0.9" fill="currentColor"/>
+                                </svg>
+                                Near limit
+                            </span>
+                        </template>
+
+                        <template id="criticalBadge">
+                            <span class="badge text-bg-danger d-inline-flex align-items-center gap-1">
+                                <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
+                                    <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                    <path d="M3.6 3.6l8.8 8.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
+                                Limit reached
+                            </span>
+                        </template>
 
                         <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->
                         <span class="invisible text-danger small d-block mb-2" id="form-error" aria-live="polite"></span>
