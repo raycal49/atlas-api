@@ -27,3 +27,14 @@ export const hideErrors = (fields) => {
   showFieldErrors(fields, {});
   showFormError(null);
 };
+
+// call counts, kept short enough to read at a glance: 1,284 stays exact, 41,200
+// becomes 41.2K. Intl does the work -- it already knows every magnitude and the
+// reader's locale, so there is nothing here to hand-roll or get wrong
+const compact = new Intl.NumberFormat(undefined, {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export const formatCount = (n) =>
+  n < 10_000 ? n.toLocaleString() : compact.format(n);

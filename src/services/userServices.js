@@ -15,6 +15,25 @@ const percentOf = (used, limit) =>
 const stateFor = (percent) =>
   percent >= CRITICAL_AT ? 'critical' : percent >= WARNING_AT ? 'warning' : 'ok';
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// whole days from today until a billing date. both sides are flattened to UTC
+// midnight first: next_bill_due is a calendar date, not an instant, so comparing
+// it against a local clock would tip the answer by a day either side of midnight
+const daysUntil = (value) => {
+  if (!value) return null;
+
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return null;
+
+  const dueMidnight = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+
+  const now = new Date();
+  const todayMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+  return Math.round((dueMidnight - todayMidnight) / MS_PER_DAY);
+};
+
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const plan = await userRepo.findActivePlanByName(planName);
@@ -77,9 +96,14 @@ export const createUserServices = (userRepo) => ({
       };
     });
 
+    const nextBillDue = period?.next_bill_due ?? null;
+
     return {
       period_start: periodStart,
-      next_bill_due: period?.next_bill_due ?? null,
+      next_bill_due: nextBillDue,
+      days_until_next_bill: daysUntil(nextBillDue),
+      total_calls: apis.reduce((sum, api) => sum + api.calls_used, 0),
+      api_count: apis.length,
       apis,
     };
   },

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi} from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createUserServices } from '../services/userServices';
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors';
 
@@ -263,6 +263,100 @@ describe('User Service', async () => {
 
             expect(result.apis[0].percent_used).toBe(0);
             expect(result.apis[0].state).toBe('ok');
+        })
+    })
+
+    describe('we summarise the whole period for the dashboard tiles', async () => {
+        const arrangeTwoApis = (userRepo, counts) => {
+            userRepo.findActiveSubscription.mockResolvedValue({
+                subscription_id: '417e-9664', plan_id: '06188b55-8cf3', started_at: '2026-06-15',
+            });
+            userRepo.findCurrentPeriod.mockResolvedValue({
+                period_start: '2026-07-15', next_bill_due: '2026-08-15',
+            });
+            userRepo.findPlanApiLimits.mockResolvedValue([
+                { api_product_id: 'api-1', api_name: 'Geocoding', monthly_limit: 5000 },
+                { api_product_id: 'api-2', api_name: 'Static Maps', monthly_limit: 10000 },
+            ]);
+            userRepo.countUsageByProduct.mockResolvedValue(counts);
+        }
+
+        it('total calls adds up every api, and api count matches the plan', async () => {
+            const { service, userRepo } = setup();
+            arrangeTwoApis(userRepo, [
+                { api_product_id: 'api-1', calls_used: 4100 },
+                { api_product_id: 'api-2', calls_used: 320 },
+            ]);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.total_calls).toBe(4420);
+            expect(result.api_count).toBe(2);
+        })
+
+        // an api the plan grants but that was never called still counts toward
+        // api_count, and contributes 0 rather than undefined to the total
+        it('an untouched api counts toward the api count without breaking the total', async () => {
+            const { service, userRepo } = setup();
+            arrangeTwoApis(userRepo, [{ api_product_id: 'api-1', calls_used: 4100 }]);
+
+            const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+            expect(result.total_calls).toBe(4100);
+            expect(result.api_count).toBe(2);
+        })
+
+        describe('and how many days are left until the next bill', async () => {
+            beforeEach(() => { vi.useFakeTimers(); })
+            afterEach(() => { vi.useRealTimers(); })
+
+            it('counts the whole days between today and the billing date', async () => {
+                // pin the clock: computing an expected value from the real date
+                // would just re-implement the code under test
+                vi.setSystemTime(new Date('2026-07-27T12:00:00Z'));
+
+                const { service, userRepo } = setup();
+                arrangeTwoApis(userRepo, []);
+
+                const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+                expect(result.days_until_next_bill).toBe(19);
+            })
+
+            // late in the day locally is still the same calendar day in UTC --
+            // the count must not tip early
+            it('is unaffected by the time of day', async () => {
+                vi.setSystemTime(new Date('2026-07-27T23:59:00Z'));
+
+                const { service, userRepo } = setup();
+                arrangeTwoApis(userRepo, []);
+
+                const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+                expect(result.days_until_next_bill).toBe(19);
+            })
+
+            it('is zero on the day the bill is due', async () => {
+                vi.setSystemTime(new Date('2026-08-15T09:00:00Z'));
+
+                const { service, userRepo } = setup();
+                arrangeTwoApis(userRepo, []);
+
+                const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+                expect(result.days_until_next_bill).toBe(0);
+            })
+
+            it('is null when there is no billing date to count toward', async () => {
+                const { service, userRepo } = setup();
+                arrangeTwoApis(userRepo, []);
+                userRepo.findCurrentPeriod.mockResolvedValue(undefined);
+
+                const result = await service.getUsageSummary('79c7d0bd4b6a');
+
+                expect(result.days_until_next_bill).toBe(null);
+                expect(result.next_bill_due).toBe(null);
+            })
         })
     })
 });

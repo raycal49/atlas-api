@@ -1,5 +1,5 @@
 import { getJson } from "./api.js";
-import { showFormError } from "./ui.js";
+import { showFormError, formatCount } from "./ui.js";
 
 const logoutBtn = document.querySelector("#logout-button");
 const myPlanSection = document.querySelector("#myPlanSection");
@@ -35,6 +35,35 @@ async function logoutUser() {
     } finally {
         logoutBtn.disabled = false;
     }
+}
+
+const daysLabel = (days) => {
+    if (days === null || days === undefined) return "";
+    if (days < 0) return "overdue";
+    if (days === 0) return "due today";
+    if (days === 1) return "due tomorrow";
+    return `in ${days} days`;
+}
+
+// the three tiles are fixed structure with only their values changing, so the
+// markup lives in dashboard.html and this just fills the spans. createElement is
+// for lists whose length comes from the data -- see renderUsage below
+const renderKpis = (usage, plan) => {
+    document.querySelector("#planName").textContent = plan?.plan_name ?? "(plan no longer offered)";
+    document.querySelector("#planPrice").textContent = plan ? `$${plan.price_per_month} / month` : "";
+
+    // next_bill_due is a calendar date, not an instant -- rendering it in UTC
+    // stops it slipping to the previous day for users west of UTC
+    document.querySelector("#nextBillDue").textContent = usage.next_bill_due
+        ? new Date(usage.next_bill_due).toLocaleDateString(undefined,
+            { timeZone: "UTC", month: "short", day: "numeric" })
+        : "—";
+
+    document.querySelector("#nextBillIn").textContent = daysLabel(usage.days_until_next_bill);
+
+    document.querySelector("#totalCalls").textContent = formatCount(usage.total_calls);
+    document.querySelector("#apiCount").textContent =
+        `across ${usage.api_count} API${usage.api_count === 1 ? "" : "s"}`;
 }
 
 // one row per API in the plan: name, the used/limit counts, and a bar so the
@@ -126,25 +155,18 @@ async function loadDashboard() {
         // (name, price) come from matching it against the /plans list
         const plan = plans.find((p) => p.plan_id === subscription.plan_id);
 
-        document.querySelector("#planName").textContent = plan?.plan_name ?? "(plan no longer offered)";
-        document.querySelector("#planPrice").textContent = plan ? `$${plan.price_per_month} / month` : "";
         document.querySelector("#planSince").textContent =
             new Date(subscription.started_at).toLocaleDateString();
-
-        myPlanSection.classList.remove("hidden");
 
         // usage is non-null whenever a subscription is, but guard anyway so a
         // surprise here can't blank out the plan details we just rendered
         if (usage) {
-            // next_bill_due is a date, not an instant -- rendering it in UTC
-            // stops it slipping to the previous day for users west of UTC
-            document.querySelector("#nextBillDue").textContent = usage.next_bill_due
-                ? new Date(usage.next_bill_due).toLocaleDateString(undefined, { timeZone: "UTC" })
-                : "—";
-
+            renderKpis(usage, plan);
             renderUsage(usage.apis);
             usageSection.classList.remove("hidden");
         }
+
+        myPlanSection.classList.remove("hidden");
     } catch (e) {
         console.error(e);
         showFormError("Could not load your dashboard. Please refresh.");

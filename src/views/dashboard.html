@@ -44,13 +44,34 @@
 
                             <!-- exactly one of the next two sections is unhidden by dashboard.js,
                                  depending on whether /subscriptions/me returns a subscription -->
+                            <!-- the three figures worth acting on. dashboard.js fills the
+                                 values; only the plan tile links anywhere so far -->
                             <div id="myPlanSection" class="hidden">
-                                <h2 class="h5">My Plan</h2>
-                                <p class="mb-1"><span id="planName"></span></p>
-                                <p class="mb-1"><span id="planPrice"></span></p>
-                                <p class="mb-1">Member since <span id="planSince"></span></p>
-                                <p class="mb-1">Next bill due <span id="nextBillDue"></span></p>
-                                <p><a href="/plans.html">Change plan</a></p>
+                                <div class="kpi-row">
+                                    <a class="kpi-tile" href="/plans.html">
+                                        <span class="kpi-label">Plan</span>
+                                        <span class="kpi-value" id="planName"></span>
+                                        <span class="kpi-sub" id="planPrice"></span>
+                                        <svg class="kpi-chevron" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor"
+                                                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </a>
+
+                                    <div class="kpi-tile">
+                                        <span class="kpi-label">Next bill</span>
+                                        <span class="kpi-value" id="nextBillDue"></span>
+                                        <span class="kpi-sub" id="nextBillIn"></span>
+                                    </div>
+
+                                    <div class="kpi-tile">
+                                        <span class="kpi-label">Calls this period</span>
+                                        <span class="kpi-value" id="totalCalls"></span>
+                                        <span class="kpi-sub" id="apiCount"></span>
+                                    </div>
+                                </div>
+
+                                <p class="text-muted small mb-0">Member since <span id="planSince"></span></p>
                             </div>
 
                             <div id="pickPlanPrompt" class="hidden">
