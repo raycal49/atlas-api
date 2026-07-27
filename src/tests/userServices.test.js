@@ -12,6 +12,8 @@ const setup = () => {
         findCurrentPeriod: vi.fn(),
         findPlanApiLimits: vi.fn(),
         countUsageByProduct: vi.fn(),
+        findPaymentHistory: vi.fn(),
+        findPlanById: vi.fn(),
     }
 
     const service = createUserServices(userRepo);
@@ -357,6 +359,76 @@ describe('User Service', async () => {
                 expect(result.days_until_next_bill).toBe(null);
                 expect(result.next_bill_due).toBe(null);
             })
+        })
+    })
+
+    describe('we gather the billing history', async () => {
+        const PAYMENTS = [
+            { payment_id: 'pay-2', amount_paid: '49.00', paid_at: '2026-07-15T00:00:00.000Z',
+              period_start: '2026-07-15', card_last4: 4242, plan_name: 'Developer' },
+            { payment_id: 'pay-1', amount_paid: '0.00', paid_at: '2026-06-15T00:00:00.000Z',
+              period_start: '2026-06-15', card_last4: null, plan_name: 'Free' },
+        ];
+
+        it('returns every payment the repository found', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findPaymentHistory.mockResolvedValue(PAYMENTS);
+            userRepo.findActiveSubscription.mockResolvedValue(undefined);
+
+            const result = await service.getPaymentHistory('79c7d0bd4b6a');
+
+            expect(result.payments).toStrictEqual(PAYMENTS);
+        })
+
+        it('has nothing upcoming when the user has no active subscription', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findPaymentHistory.mockResolvedValue(PAYMENTS);
+            userRepo.findActiveSubscription.mockResolvedValue(undefined);
+
+            const result = await service.getPaymentHistory('79c7d0bd4b6a');
+
+            expect(result.upcoming).toBe(null);
+            expect(userRepo.findPlanById).not.toHaveBeenCalled();
+        })
+
+        // the next charge is priced from the plan they are on now. quoting the
+        // last payment instead would show the old price for a whole cycle after
+        // an upgrade
+        it('prices the next charge from the current plan, not the last payment', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findPaymentHistory.mockResolvedValue(PAYMENTS);
+            userRepo.findActiveSubscription.mockResolvedValue({
+                subscription_id: '417e-9664', plan_id: 'plan-business', started_at: '2026-06-15',
+            });
+            userRepo.findCurrentPeriod.mockResolvedValue({
+                period_start: '2026-07-15', next_bill_due: '2026-08-15',
+            });
+            userRepo.findPlanById.mockResolvedValue({
+                plan_id: 'plan-business', plan_name: 'Business', price_per_month: '199.00',
+            });
+
+            const result = await service.getPaymentHistory('79c7d0bd4b6a');
+
+            expect(result.upcoming).toStrictEqual({
+                due_on: '2026-08-15', amount: '199.00', plan_name: 'Business',
+            });
+        })
+
+        it('has nothing upcoming when the subscription has no billing period yet', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findPaymentHistory.mockResolvedValue([]);
+            userRepo.findActiveSubscription.mockResolvedValue({
+                subscription_id: '417e-9664', plan_id: 'plan-free', started_at: '2026-06-15',
+            });
+            userRepo.findCurrentPeriod.mockResolvedValue(undefined);
+            userRepo.findPlanById.mockResolvedValue({
+                plan_id: 'plan-free', plan_name: 'Free', price_per_month: '0.00',
+            });
+
+            const result = await service.getPaymentHistory('79c7d0bd4b6a');
+
+            expect(result.upcoming).toBe(null);
+            expect(result.payments).toStrictEqual([]);
         })
     })
 });

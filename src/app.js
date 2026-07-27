@@ -42,10 +42,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', userRoutes); // mounted at root so paths are exactly /plans and /subscriptions
 
-// dashboard.html lives in views/ (outside the static mapping) so the only way
-// to reach it is this route, which runs auth first
+// these pages live in views/ (outside the static mapping) so the only way to
+// reach them is through a route that runs auth first
 app.get('/dashboard', authMiddleware, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
+});
+
+app.get('/payments', authMiddleware, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'payments.html'));
 });
 
 app.use((err, req, res, next) => {

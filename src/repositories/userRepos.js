@@ -70,6 +70,35 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
+  // every payment the user has ever made, newest first. the join runs through
+  // ALL of their subscriptions, not just the active one -- after a plan change
+  // older payments hang off the previous subscription_id, and dropping them
+  // would silently shorten their billing history.
+  // plans is a LEFT JOIN because subscriptions.plan_id is nullable: a payment
+  // should still appear even if its plan can't be named
+  findPaymentHistory: async (userId) => {
+    return await sql`
+      SELECT ph.payment_id,
+             ph.amount_paid,
+             ph.paid_at,
+             ph.period_start,
+             ph.card_last4,
+             p.plan_name
+      FROM payment_history ph
+      JOIN subscriptions s ON s.subscription_id = ph.subscription_id
+      LEFT JOIN plans p    ON p.plan_id = s.plan_id
+      WHERE s.user_id = ${userId}
+      ORDER BY ph.paid_at DESC`;
+  },
+
+  findPlanById: async (planId) => {
+    const rows = await sql`
+      SELECT plan_id, plan_name, price_per_month
+      FROM plans
+      WHERE plan_id = ${planId}`;
+    return rows[0];
+  },
+
   // which APIs a plan grants, and how many calls each one allows.
   // a product with no row here is not part of the plan at all
   findPlanApiLimits: async (planId) => {

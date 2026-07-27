@@ -7,6 +7,7 @@ export const createUserRoutes = (userController, authMiddleware) => {
   router.get('/plans', userController.getPlans);
   router.get('/subscriptions/me', authMiddleware, userController.getMySubscription);
   router.get('/usage/me', authMiddleware, userController.getMyUsage);
+  router.get('/payments/me', authMiddleware, userController.getMyPayments);
   router.post('/subscriptions', authMiddleware, validate(selectPlanSchema), userController.selectPlan);
   return router;
 };

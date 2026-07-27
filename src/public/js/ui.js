@@ -38,3 +38,15 @@ const compact = new Intl.NumberFormat(undefined, {
 
 export const formatCount = (n) =>
   n < 10_000 ? n.toLocaleString() : compact.format(n);
+
+// money arrives from postgres as a string, because numeric columns lose precision
+// the moment they become floats. Number() here is safe only because this is the
+// last step before display -- never do arithmetic on the result
+const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
+
+export const formatMoney = (value) => money.format(Number(value));
+
+// card_last4 is stored as a smallint, so a card ending 0042 comes back as 42.
+// padding restores the leading zeros at display time
+export const formatCard = (last4) =>
+  last4 === null || last4 === undefined ? "—" : `•••• ${String(last4).padStart(4, "0")}`;

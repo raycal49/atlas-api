@@ -20,6 +20,12 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ usage });
   },
 
+  getMyPayments: async (req, res) => {
+    const history = await userServices.getPaymentHistory(req.tokenInfo.id);
+
+    return res.status(200).json({ history });
+  },
+
   selectPlan: async (req, res) => {
     // card_number is already just the last 4 digits (schema transform)
     const { plan_name, card_number } = req.body;

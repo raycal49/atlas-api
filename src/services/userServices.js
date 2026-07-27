@@ -58,6 +58,29 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllActivePlans();
   },
 
+  // past payments plus the charge that is coming. both halves live in one
+  // response so the page needs a single request rather than stitching three
+  // together in the browser
+  getPaymentHistory: async (userId) => {
+    const payments = await userRepo.findPaymentHistory(userId);
+
+    const subscription = await userRepo.findActiveSubscription(userId);
+    if (!subscription) return { payments, upcoming: null };
+
+    const [period, plan] = await Promise.all([
+      userRepo.findCurrentPeriod(subscription.subscription_id),
+      userRepo.findPlanById(subscription.plan_id),
+    ]);
+
+    // the upcoming amount comes from the plan they are on NOW, not from the
+    // last payment -- those differ for a whole cycle after a plan change
+    const upcoming = period && plan
+      ? { due_on: period.next_bill_due, amount: plan.price_per_month, plan_name: plan.plan_name }
+      : null;
+
+    return { payments, upcoming };
+  },
+
   // everything the dashboard needs to answer "how much of my plan have I used
   // this cycle, and when does the next bill land". null when the user has no
   // plan -- the same "normal, not an error" state getCurrentSubscription uses
