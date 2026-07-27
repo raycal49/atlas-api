@@ -1,4 +1,4 @@
-<title>Phone Co — Dashboard Mockup</title>
+<title>Atlas API — Dashboard Mockup</title>
 
 <style>
   :root {
@@ -354,7 +354,7 @@
 </style>
 
 <nav class="navbar">
-  <span class="brand">Phone Co</span>
+  <span class="brand">Atlas API</span>
   <span class="links">Home</span>
 </nav>
 
@@ -372,7 +372,7 @@
 
         <a class="tile" href="#" data-route="/plans.html">
           <span class="label">Plan</span>
-          <span class="value">Business</span>
+          <span class="value">Developer</span>
           <span class="sub">$49.00 / month</span>
           <svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -390,8 +390,8 @@
 
         <a class="tile" href="#" data-route="/usage">
           <span class="label">Calls this period</span>
-          <span class="value">52.5K</span>
-          <span class="sub">across 4 APIs</span>
+          <span class="value">6,660</span>
+          <span class="sub">across 5 APIs</span>
           <svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -418,16 +418,16 @@
 
         <div class="api-row ok">
           <div class="api-head">
-            <span class="api-name">Number Lookup</span>
-            <span class="api-counts"><span class="used">1,284</span> / 50K calls · 48.7K left</span>
+            <span class="api-name">Directions</span>
+            <span class="api-counts"><span class="used">0</span> / 2,500 calls · 2,500 left</span>
           </div>
-          <div class="meter"><div class="meter-fill" style="width: 3%"></div></div>
+          <div class="meter"><div class="meter-fill" style="width: 0%"></div></div>
         </div>
 
         <div class="api-row warning">
           <div class="api-head">
             <span class="api-name">
-              SMS Delivery
+              Geocoding
               <span class="badge">
                 <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M8 1.6 15 14H1L8 1.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -437,7 +437,7 @@
                 Near limit
               </span>
             </span>
-            <span class="api-counts"><span class="used">41.2K</span> / 50K calls · 8.8K left</span>
+            <span class="api-counts"><span class="used">4,100</span> / 5,000 calls · 900 left</span>
           </div>
           <div class="meter"><div class="meter-fill" style="width: 82%"></div></div>
         </div>
@@ -445,7 +445,7 @@
         <div class="api-row critical">
           <div class="api-head">
             <span class="api-name">
-              Carrier Verify
+              Isochrone
               <span class="badge">
                 <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
                   <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -454,17 +454,25 @@
                 Limit reached
               </span>
             </span>
-            <span class="api-counts"><span class="used">10K</span> / 10K calls · 0 left</span>
+            <span class="api-counts"><span class="used">1,000</span> / 1,000 calls · 0 left</span>
           </div>
           <div class="meter"><div class="meter-fill" style="width: 100%"></div></div>
         </div>
 
         <div class="api-row ok">
           <div class="api-head">
-            <span class="api-name">Voice Minutes</span>
-            <span class="api-counts"><span class="used">0</span> / 5K calls · 5K left</span>
+            <span class="api-name">Reverse Geocoding</span>
+            <span class="api-counts"><span class="used">1,240</span> / 5,000 calls · 3,760 left</span>
           </div>
-          <div class="meter"><div class="meter-fill" style="width: 0%"></div></div>
+          <div class="meter"><div class="meter-fill" style="width: 25%"></div></div>
+        </div>
+
+        <div class="api-row ok">
+          <div class="api-head">
+            <span class="api-name">Static Maps</span>
+            <span class="api-counts"><span class="used">320</span> / 10K calls · 9,680 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 3%"></div></div>
         </div>
 
       </div>
@@ -506,7 +514,9 @@
       <ul>
         <li><span>Every value comes from <code>/usage/me</code> and <code>/plans</code>, which you already have. <b>No new queries.</b></span></li>
         <li><span><b>Calls this period</b> is a client-side sum of <code>calls_used</code>; <b>in 19 days</b> is <code>next_bill_due</code> minus today.</span></li>
-        <li><span><b>Voice Minutes at 0</b> is the case your simplified SQL leaves out of the result and the service fills in with <code>?? 0</code>.</span></li>
+        <li><span><b>Directions at 0</b> is the case your simplified SQL leaves out of the result and the service fills in with <code>?? 0</code>.</span></li>
+        <li><span>APIs are listed <b>alphabetically</b> because <code>findPlanApiLimits</code> ends in <code>ORDER BY ap.api_name</code> — without it, row order between page loads is not guaranteed.</span></li>
+        <li><span>Plan, APIs and limits match the <b>Developer</b> tier in <code>src/scripts/seedUsage.js</code>, so a seeded database renders this shape.</span></li>
       </ul>
     </div>
   </div>
