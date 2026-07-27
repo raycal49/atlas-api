@@ -57,20 +57,25 @@ async function loadPage() {
         const { calls, next_before } = data.log;
 
         if (calls.length === 0 && loaded === 0) {
+            logTableWrap.classList.add("d-none");
             noCalls.classList.remove("d-none");
             return;
         }
+
+        // this page appends rather than replaces, so the skeleton rows the markup
+        // ships with have to be cleared explicitly before the first real page
+        if (loaded === 0) logBody.replaceChildren();
 
         appendCalls(calls);
         loaded += calls.length;
         loadedCount.textContent = `Showing ${formatCount(loaded)} call${loaded === 1 ? "" : "s"}`;
 
-        logTableWrap.classList.remove("d-none");
-
         nextBefore = next_before;
         loadMoreBtn.classList.toggle("d-none", !nextBefore);
     } catch (e) {
         console.error(e);
+        // clear the skeletons -- a shimmer that never resolves reads as a hang
+        if (loaded === 0) logTableWrap.classList.add("d-none");
         showFormError("Could not load your call log. Please refresh.");
     } finally {
         loadMoreBtn.disabled = false;

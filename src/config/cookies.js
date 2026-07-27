@@ -15,3 +15,17 @@ export const clearCookieOptions = {
   sameSite: 'strict',
   path: '/'
 };
+
+// A companion to the token that page JavaScript IS allowed to read. It carries
+// no secret -- only the fact that somebody is signed in -- so the navbar can be
+// correct on the first frame instead of asking the server and repainting.
+//
+// Same maxAge as the token, so the two expire together and cannot drift apart.
+// If it ever does go stale the worst case is cosmetic: the navbar offers
+// Dashboard, the click hits authMiddleware, and the user lands on login. Every
+// protected route still verifies the real JWT; this only decides what to show.
+export const hintCookieOptions = { ...cookieOptions, httpOnly: false };
+
+export const clearHintCookieOptions = { ...clearCookieOptions, httpOnly: false };
+
+export const SIGNED_IN_COOKIE = 'signed_in';

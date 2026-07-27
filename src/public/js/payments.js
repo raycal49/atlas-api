@@ -15,8 +15,11 @@ const instant = (value) => new Date(value).toLocaleDateString();
 const calendarDay = (value) =>
     new Date(value).toLocaleDateString(undefined, { timeZone: "UTC" });
 
+// the card renders as a skeleton from the first frame, so this fills it in or
+// takes it away -- it never has to reveal it
 const renderUpcoming = (upcoming) => {
     if (!upcoming) {
+        upcomingCard.classList.add("d-none");
         noSubscriptionNote.classList.remove("d-none");
         return;
     }
@@ -26,14 +29,13 @@ const renderUpcoming = (upcoming) => {
         ? `Due ${calendarDay(upcoming.due_on)}`
         : "No date scheduled";
     document.querySelector("#upcomingPlan").textContent = upcoming.plan_name ?? "";
-
-    upcomingCard.classList.remove("d-none");
 }
 
 // one row per payment, built with createElement/textContent so plan names are
 // always treated as text and never as HTML
 const renderPayments = (payments) => {
     if (payments.length === 0) {
+        paymentsTableWrap.classList.add("d-none");
         noPayments.classList.remove("d-none");
         return;
     }
@@ -66,9 +68,9 @@ const renderPayments = (payments) => {
         fragment.append(row);
     }
 
-    // replaceChildren so a re-render swaps the rows rather than doubling them
+    // replaceChildren so a re-render swaps the rows rather than doubling them --
+    // and it is what clears the skeleton rows the markup ships with
     paymentsBody.replaceChildren(fragment);
-    paymentsTableWrap.classList.remove("d-none");
 }
 
 async function loadPayments() {
@@ -83,6 +85,9 @@ async function loadPayments() {
         renderPayments(data.history.payments);
     } catch (e) {
         console.error(e);
+        // clear the skeletons -- a shimmer that never resolves reads as a hang
+        upcomingCard.classList.add("d-none");
+        paymentsTableWrap.classList.add("d-none");
         showFormError("Could not load your billing history. Please refresh.");
     }
 }

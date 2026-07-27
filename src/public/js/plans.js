@@ -48,13 +48,22 @@ const renderPlans = (plans) => {
         description.className = "card-text text-body-secondary";
         description.textContent = plan.description ?? "";
 
+        // both are built; the CSS in style.css drops whichever does not match the
+        // visitor. a signed-out visitor never gets a path to the card field
         const chooseBtn = document.createElement("button");
         chooseBtn.type = "button";
         chooseBtn.className = "btn btn-primary mt-auto";
+        chooseBtn.dataset.auth = "in";
         chooseBtn.textContent = "Choose";
         chooseBtn.addEventListener("click", () => choosePlan(plan.plan_name));
 
-        body.append(name, price, description, chooseBtn);
+        const signInLink = document.createElement("a");
+        signInLink.className = "btn btn-outline-secondary mt-auto";
+        signInLink.dataset.auth = "out";
+        signInLink.href = "/login.html";
+        signInLink.textContent = "Sign in to subscribe";
+
+        body.append(name, price, description, chooseBtn, signInLink);
         card.append(body);
         col.append(card);
         fragment.append(col);

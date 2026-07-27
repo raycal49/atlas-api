@@ -10,3 +10,15 @@
 
    Dark mode is data-bs-theme="dark" on <html>, not CSS. Component colours are
    restyled by setting their --bs-* variables, not by writing new rules. */
+
+/* ---- signed-in / signed-out visibility -----------------------------------
+   The <head> script on every page stamps .auth-in or .auth-out on <html> from
+   the signed_in cookie, BEFORE the body paints. These two rules then decide
+   what survives, so the navbar is right on the first frame instead of being
+   briefly wrong while a fetch resolves.
+
+   Bootstrap has no equivalent: .d-none is a fixed decision, and this one
+   depends on state that only exists at runtime. Hence the only handwritten
+   rules in this file. */
+.auth-in  [data-auth="out"] { display: none !important; }
+.auth-out [data-auth="in"]  { display: none !important; }

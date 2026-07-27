@@ -1,7 +1,6 @@
 import { getJson } from "./api.js";
 import { showFormError, formatCount } from "./ui.js";
 
-const logoutBtn = document.querySelector("#logout-button");
 const myPlanSection = document.querySelector("#myPlanSection");
 const pickPlanPrompt = document.querySelector("#pickPlanPrompt");
 const paidBanner = document.querySelector("#paidBanner");
@@ -40,28 +39,6 @@ const periodLabel = (start, end) => {
 
     const year = new Date(end).toLocaleDateString(undefined, { timeZone: "UTC", year: "numeric" });
     return `${monthDay(start)} – ${monthDay(end)}, ${year}`;
-}
-
-async function logoutUser() {
-    logoutBtn.disabled = true;
-
-    try {
-        const response = await fetch("/auth/logout", {
-            method: "POST",
-        });
-
-        if (response.ok) {
-            window.location.href = '/login.html';
-            return;
-        }
-
-        showFormError("Something went wrong. Please try again.");
-    } catch (e) {
-        console.error(e);
-        showFormError("Something went wrong. Please try again.");
-    } finally {
-        logoutBtn.disabled = false;
-    }
 }
 
 const daysLabel = (days) => {
@@ -184,9 +161,12 @@ async function loadDashboard() {
         const { plans } = plansData;
         const { usage } = usageData;
 
-        // subscription response is supposed to hold the user's subscription
-        // if it doesn't, then we reveal pick plan prompt and return from the function here
+        // the plan and usage sections render as skeletons from the first frame,
+        // which assumes the common case of a subscriber. without one, swap them
+        // for the prompt instead
         if (!subscription) {
+            myPlanSection.classList.add("d-none");
+            usageSection.classList.add("d-none");
             pickPlanPrompt.classList.remove("d-none");
             return;
         }
@@ -200,7 +180,7 @@ async function loadDashboard() {
             new Date(subscription.started_at).toLocaleDateString();
 
         // usage is non-null whenever a subscription is, but guard anyway so a
-        // surprise here can't blank out the plan details we just rendered
+        // surprise here can't leave the tiles shimmering forever
         if (usage) {
             renderKpis(usage, plan);
 
@@ -208,12 +188,15 @@ async function loadDashboard() {
                 periodLabel(usage.period_start, usage.next_bill_due);
 
             renderUsage(usage.apis);
-            usageSection.classList.remove("d-none");
+        } else {
+            usageSection.classList.add("d-none");
         }
-
-        myPlanSection.classList.remove("d-none");
     } catch (e) {
         console.error(e);
+        // clear the skeletons too -- a shimmer that never resolves reads as a
+        // hang, where an error message reads as something the user can act on
+        myPlanSection.classList.add("d-none");
+        usageSection.classList.add("d-none");
         showFormError("Could not load your dashboard. Please refresh.");
     }
 }
@@ -230,11 +213,6 @@ const showReceiptIfJustPaid = () => {
     // strip ?paid= from the address bar so a refresh doesn't re-show the banner
     history.replaceState(null, "", "/dashboard");
 }
-
-logoutBtn.addEventListener("click", async () => {
-    showFormError(null);
-    await logoutUser();
-});
 
 showReceiptIfJustPaid();
 loadDashboard();
