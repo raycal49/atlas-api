@@ -42,11 +42,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/', userRoutes); // mounted at root so paths are exactly /plans and /subscriptions
 
-// dashboard.html lives in views/ (outside the static mapping) so the only way
-// to reach it is this route, which runs auth first
-app.get('/dashboard', authMiddleware, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
-});
+// these pages live in views/ (outside the static mapping) so the only way to
+// reach them is through a route that runs auth first.
+//
+// no-store matters as much as the auth check: without it, pressing Back after
+// logging out re-displays the cached page, and the user is looking at an account
+// they are no longer signed into. no-store forces a refetch, which hits
+// authMiddleware and redirects to login.
+const sendProtectedPage = (file) => (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'views', file));
+};
+
+app.get('/dashboard', authMiddleware, sendProtectedPage('dashboard.html'));
+app.get('/payments', authMiddleware, sendProtectedPage('payments.html'));
+app.get('/usage', authMiddleware, sendProtectedPage('usage.html'));
 
 app.use((err, req, res, next) => {
   // a browser NAVIGATING to a protected page should land on login, not see JSON.

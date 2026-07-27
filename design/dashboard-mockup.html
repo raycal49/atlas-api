@@ -1,0 +1,541 @@
+<title>Atlas API — Dashboard Mockup</title>
+
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #f9f9f7;
+    --surface:      #fcfcfb;
+    --raised:       #ffffff;
+    --ink:          #0b0b0b;
+    --ink-2:        #52514e;
+    --ink-muted:    #898781;
+    --hairline:     rgba(11, 11, 11, 0.10);
+    --rule:         #e1e0d9;
+    --navbar:       #212529;
+    --navbar-ink:   #f8f9fa;
+
+    --meter-ok:       #2a78d6;
+    --meter-warning:  #fab219;
+    --meter-critical: #d03b3b;
+
+    --link: #2a78d6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane:      #0d0d0d;
+      --surface:    #1a1a19;
+      --raised:     #211f1f;
+      --ink:        #ffffff;
+      --ink-2:      #c3c2b7;
+      --ink-muted:  #898781;
+      --hairline:   rgba(255, 255, 255, 0.10);
+      --rule:       #2c2c2a;
+      --navbar:     #000000;
+      --navbar-ink: #f1f1ee;
+      --meter-ok:   #3987e5;
+      --link:       #6da7ec;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:      #0d0d0d;
+    --surface:    #1a1a19;
+    --raised:     #211f1f;
+    --ink:        #ffffff;
+    --ink-2:      #c3c2b7;
+    --ink-muted:  #898781;
+    --hairline:   rgba(255, 255, 255, 0.10);
+    --rule:       #2c2c2a;
+    --navbar:     #000000;
+    --navbar-ink: #f1f1ee;
+    --meter-ok:   #3987e5;
+    --link:       #6da7ec;
+  }
+
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ── page chrome ─────────────────────────────────────────── */
+
+  .navbar {
+    background: var(--navbar);
+    color: var(--navbar-ink);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .navbar .brand { font-size: 1.125rem; font-weight: 600; }
+  .navbar .links { font-size: 0.9375rem; color: #c9c9c4; }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  .card-body {
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: var(--ink-muted); margin: 0; font-size: 0.9375rem; }
+
+  .divider { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+
+  /* ── KPI row: the three things you'd act on ──────────────── */
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 15px 12px;
+    background: var(--raised);
+    border: 1px solid var(--hairline);
+    border-radius: 7px;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    transition: border-color 120ms ease, transform 120ms ease;
+  }
+  .tile:hover {
+    border-color: color-mix(in oklab, var(--link) 55%, var(--hairline));
+    transform: translateY(-1px);
+  }
+  .tile:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .tile .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  /* standalone values keep proportional figures — tabular is for columns */
+  .tile .value {
+    font-size: 1.625rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  .tile .sub { font-size: 0.8125rem; color: var(--ink-2); }
+  .tile .chev {
+    position: absolute;
+    top: 14px;
+    right: 13px;
+    color: var(--ink-muted);
+  }
+  .tile:hover .chev { color: var(--link); }
+
+  /* ── usage section ───────────────────────────────────────── */
+
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .section-head h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+  .period {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .head-link {
+    font-size: 0.8125rem;
+    color: var(--link);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  .head-link:hover { text-decoration: underline; }
+  .head-link:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
+
+  .usage { display: flex; flex-direction: column; gap: 17px; }
+
+  .api-row { display: flex; flex-direction: column; gap: 7px; }
+
+  .api-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .api-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .api-counts {
+    font-size: 0.875rem;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .api-counts .used { color: var(--ink); font-weight: 600; }
+
+  /* track is a light step of the SAME ramp as its fill, so the state
+     reads across the whole bar rather than only the filled part */
+  .meter {
+    height: 10px;
+    border-radius: 0 4px 4px 0;
+    background: color-mix(in oklab, var(--fill) 16%, var(--surface));
+    overflow: hidden;
+  }
+  .meter-fill {
+    height: 100%;
+    background: var(--fill);
+    border-radius: 0 4px 4px 0; /* square at the baseline, rounded data end */
+  }
+
+  .api-row.ok       { --fill: var(--meter-ok); }
+  .api-row.warning  { --fill: var(--meter-warning); }
+  .api-row.critical { --fill: var(--meter-critical); }
+
+  /* status never rides on color alone — icon + label, ink-colored text */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 2px 8px 2px 6px;
+    border-radius: 999px;
+    color: var(--ink);
+    background: color-mix(in oklab, var(--fill) 20%, var(--surface));
+    border: 1px solid color-mix(in oklab, var(--fill) 42%, var(--surface));
+    white-space: nowrap;
+  }
+  .badge svg { display: block; flex: none; }
+
+  .card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .muted-note { font-size: 0.8125rem; color: var(--ink-muted); }
+
+  .btn {
+    font: inherit;
+    font-size: 0.9375rem;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--ink-muted);
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .btn:hover { background: color-mix(in oklab, var(--ink) 6%, var(--surface)); }
+  .btn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+
+  /* ── route indicator (mockup affordance only) ────────────── */
+
+  .route {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--ink);
+    color: var(--plane);
+    font-size: 0.8125rem;
+    padding: 8px 14px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .route.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .tile, .route { transition: none; }
+    .tile:hover { transform: none; }
+  }
+
+  /* ── annotation key ──────────────────────────────────────── */
+
+  .key {
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .key h3 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 9px;
+  }
+  .key ol, .key ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .key ol { counter-reset: item; }
+  .key li {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--ink-2);
+  }
+  .key ol li { counter-increment: item; }
+  .key ol li::before {
+    content: counter(item);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-align: right;
+  }
+  .key ul li::before { content: "→"; color: var(--ink-muted); text-align: right; }
+  .key b { color: var(--ink); font-weight: 600; }
+  .key code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125em;
+    color: var(--ink);
+  }
+</style>
+
+<nav class="navbar">
+  <span class="brand">Atlas API</span>
+  <span class="links">Home</span>
+</nav>
+
+<div class="page">
+
+  <section class="card">
+    <div class="card-body">
+
+      <div>
+        <h1>Dashboard</h1>
+        <p class="subtitle">Welcome back.</p>
+      </div>
+
+      <div class="kpis">
+
+        <a class="tile" href="#" data-route="/plans.html">
+          <span class="label">Plan</span>
+          <span class="value">Developer</span>
+          <span class="sub">$49.00 / month</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+
+        <a class="tile" href="#" data-route="/payments">
+          <span class="label">Next bill</span>
+          <span class="value">Aug 15</span>
+          <span class="sub">in 19 days · $49.00</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+
+        <a class="tile" href="#" data-route="/usage">
+          <span class="label">Calls this period</span>
+          <span class="value">6,660</span>
+          <span class="sub">across 5 APIs</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+
+      </div>
+
+      <hr class="divider">
+
+      <div class="section-head">
+        <h2>
+          API Usage
+          <span class="period">Jul 15 – Aug 15, 2026</span>
+        </h2>
+        <a class="head-link" href="#" data-route="/usage">
+          View full log
+          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="usage">
+
+        <div class="api-row ok">
+          <div class="api-head">
+            <span class="api-name">Directions</span>
+            <span class="api-counts"><span class="used">0</span> / 2,500 calls · 2,500 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 0%"></div></div>
+        </div>
+
+        <div class="api-row warning">
+          <div class="api-head">
+            <span class="api-name">
+              Geocoding
+              <span class="badge">
+                <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 1.6 15 14H1L8 1.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M8 6v3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <circle cx="8" cy="11.8" r="0.9" fill="currentColor"/>
+                </svg>
+                Near limit
+              </span>
+            </span>
+            <span class="api-counts"><span class="used">4,100</span> / 5,000 calls · 900 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 82%"></div></div>
+        </div>
+
+        <div class="api-row critical">
+          <div class="api-head">
+            <span class="api-name">
+              Isochrone
+              <span class="badge">
+                <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M3.6 3.6l8.8 8.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+                Limit reached
+              </span>
+            </span>
+            <span class="api-counts"><span class="used">1,000</span> / 1,000 calls · 0 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 100%"></div></div>
+        </div>
+
+        <div class="api-row ok">
+          <div class="api-head">
+            <span class="api-name">Reverse Geocoding</span>
+            <span class="api-counts"><span class="used">1,240</span> / 5,000 calls · 3,760 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 25%"></div></div>
+        </div>
+
+        <div class="api-row ok">
+          <div class="api-head">
+            <span class="api-name">Static Maps</span>
+            <span class="api-counts"><span class="used">320</span> / 10K calls · 9,680 left</span>
+          </div>
+          <div class="meter"><div class="meter-fill" style="width: 3%"></div></div>
+        </div>
+
+      </div>
+
+      <hr class="divider">
+
+      <div class="card-foot">
+        <span class="muted-note">Member since Mar 15, 2026</span>
+        <button class="btn" type="button">Log out</button>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="key">
+    <div>
+      <h3>Visual refinements</h3>
+      <ol>
+        <li><span><b>Track is a light step of the fill's own ramp</b>, not neutral grey — compare the blue, amber and red tracks.</span></li>
+        <li><span><b>Status never rides on color alone</b> — amber and red rows carry an icon and a written label.</span></li>
+        <li><span><b>Counts are compacted</b> — <code>41.2K / 50K</code>, not <code>41200 / 50000</code>.</span></li>
+        <li><span><b>The period is stated in words</b>, so "1,284 calls" has a timeframe attached.</span></li>
+        <li><span><b>Text wears ink tokens, never the data color.</b> Only meters and badge icons are colored.</span></li>
+        <li><span><b>Meters are 10px with a 4px rounded data end</b>, square at the baseline.</span></li>
+      </ol>
+    </div>
+
+    <div>
+      <h3>Navigation — click any tile</h3>
+      <ul>
+        <li><span><b>Plan</b> → change or cancel your plan <code>/plans.html</code> (route already exists)</span></li>
+        <li><span><b>Next bill</b> → payment history plus the upcoming charge <code>/payments</code> (not built)</span></li>
+        <li><span><b>Calls this period</b> → the detailed call log <code>/usage</code> (not built)</span></li>
+      </ul>
+    </div>
+
+    <div>
+      <h3>Data behind it</h3>
+      <ul>
+        <li><span>Every value comes from <code>/usage/me</code> and <code>/plans</code>, which you already have. <b>No new queries.</b></span></li>
+        <li><span><b>Calls this period</b> is a client-side sum of <code>calls_used</code>; <b>in 19 days</b> is <code>next_bill_due</code> minus today.</span></li>
+        <li><span><b>Directions at 0</b> is the case your simplified SQL leaves out of the result and the service fills in with <code>?? 0</code>.</span></li>
+        <li><span>APIs are listed <b>alphabetically</b> because <code>findPlanApiLimits</code> ends in <code>ORDER BY ap.api_name</code> — without it, row order between page loads is not guaranteed.</span></li>
+        <li><span>Plan, APIs and limits match the <b>Developer</b> tier in <code>src/scripts/seedUsage.js</code>, so a seeded database renders this shape.</span></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="route" id="route" role="status" aria-live="polite"></div>
+
+<script>
+  const routeEl = document.querySelector("#route");
+  let routeTimer;
+
+  document.querySelectorAll("[data-route]").forEach((el) => {
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      routeEl.textContent = `Mockup — this would open ${el.dataset.route}`;
+      routeEl.classList.add("on");
+      clearTimeout(routeTimer);
+      routeTimer = setTimeout(() => routeEl.classList.remove("on"), 2200);
+    });
+  });
+</script>

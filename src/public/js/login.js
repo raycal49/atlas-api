@@ -1,56 +1,29 @@
+import { postForm } from "./api.js";
+import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
+
 const form = document.querySelector("#userinfo");
 const submitBtn = form.querySelector('button[type="submit"]');
-const formError = document.querySelector("#form-error");
 
-const showFieldErrors = (fieldErrors) => {
-    const fields = ["username", "password"];
-
-    for (const field of fields) {
-        const span = document.querySelector(`#${field}-error`);
-        span.classList.toggle("invisible", !fieldErrors[field]);
-    }
-}
-
-// 401s and 500s are one message for the whole form, not tied to a field
-const showFormError = (message) => {
-    formError.textContent = message ?? "";
-    formError.classList.toggle("invisible", !message);
-}
-
-const hideAllErrors = () => {
-    showFieldErrors({});
-    showFormError(null);
-}
+// the inputs this form can get per-field errors back for
+const FIELDS = ["username", "password"];
 
 async function loginUser() {
     submitBtn.disabled = true;
 
-    const body = new URLSearchParams(new FormData(form));
-
     try {
-        const response = await fetch("/auth/login", {
-            method: form.method,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body,
-        });
+        const { ok, status, body } = await postForm("/auth/login", new FormData(form));
 
-        if (response.ok) {
+        if (ok) {
             window.location.href = '/dashboard';
             return;
         }
 
-        const responseBody = await response.json();
-
-        console.log("The result of the server-side validation is: " + JSON.stringify(responseBody, null, 2));
-
-        if (response.status === 400 && responseBody.status === "fail") {
-            showFieldErrors(responseBody.errors);
+        if (status === 400 && body?.status === "fail") {
+            showFieldErrors(FIELDS, body.errors);
             return;
         }
 
-        if (response.status === 401) {
+        if (status === 401) {
             // deliberately vague -- never say which of the two was wrong
             showFormError("Invalid username or password");
             return;
@@ -67,9 +40,9 @@ async function loginUser() {
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    hideAllErrors();
+    hideErrors(FIELDS);
     await loginUser();
 });
 
 // stale errors disappear as soon as the user starts fixing their input
-form.addEventListener("input", hideAllErrors);
+form.addEventListener("input", () => hideErrors(FIELDS));

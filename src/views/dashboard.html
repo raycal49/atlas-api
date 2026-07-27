@@ -1,76 +1,180 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Raymond Calderon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/stylesheets/style.css">
-    <script src="/js/dashboard.js" defer></script>
+    <!-- Stamps the auth state on <html> from the signed_in cookie BEFORE the body
+         paints, so the navbar is correct on the first frame rather than briefly
+         wrong. Must stay a plain blocking script: defer or type="module" would
+         both run after the body renders and reintroduce the flash. -->
+    <script>
+        document.documentElement.classList.add(
+            /(^|;\s*)signed_in=1(;|$)/.test(document.cookie) ? "auth-in" : "auth-out"
+        );
+    </script>
+    <script src="/js/dashboard.js" type="module"></script>
     <title>Phone Co</title>
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container">
-                <a class="navbar-brand" href="index.html">Phone Co</a>
+                <a class="navbar-brand" href="/index.html">Phone Co</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navLinks"
                         aria-controls="navLinks" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navLinks">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/plans.html">Plans</a></li>
+
+                        <li class="nav-item" data-auth="in"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+                        <li class="nav-item" data-auth="in">
+                            <!-- a plain form POST, so the navbar needs no JavaScript at all -->
+                            <form method="POST" action="/auth/logout">
+                                <button type="submit" class="nav-link border-0 bg-transparent">Log out</button>
+                            </form>
+                        </li>
+
+                        <li class="nav-item" data-auth="out"><a class="nav-link" href="/login.html">Login</a></li>
+                        <li class="nav-item" data-auth="out"><a class="nav-link" href="/register.html">Register</a></li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
 
-    <main>
-        <div class="container py-5">
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <section class="card shadow-sm">
-                        <div class="card-body">
-                            <h1 class="h3">Dashboard</h1>
-                            <p class="subtitle text-muted">Welcome back.</p>
+    <main class="container flex-grow-1 py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <section class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h1 class="h3">Dashboard</h1>
+                        <p class="text-body-secondary">Welcome back.</p>
 
-                            <!-- shown briefly after a payment; dashboard.js fills in the receipt id -->
-                            <div id="paidBanner" class="alert alert-success hidden" role="alert">
-                                Payment received &mdash; receipt #<span id="receiptId"></span>
-                            </div>
-
-                            <!-- exactly one of the next two sections is unhidden by dashboard.js,
-                                 depending on whether /subscriptions/me returns a subscription -->
-                            <div id="myPlanSection" class="hidden">
-                                <h2 class="h5">My Plan</h2>
-                                <p class="mb-1"><span id="planName"></span></p>
-                                <p class="mb-1"><span id="planPrice"></span></p>
-                                <p class="mb-1">Member since <span id="planSince"></span></p>
-                                <p><a href="/plans.html">Change plan</a></p>
-                            </div>
-
-                            <div id="pickPlanPrompt" class="hidden">
-                                <h2 class="h5">No plan yet</h2>
-                                <p>You don't have a plan. Pick one to get started!</p>
-                                <p><a href="/plans.html">Pick a plan</a></p>
-                            </div>
-
-                            <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->
-                            <span class="invisible text-danger small d-block mb-2" id="form-error" aria-live="polite"></span>
-
-                            <button id="logout-button" type="button" class="btn btn-outline-secondary">Log out</button>
+                        <!-- shown briefly after a payment; dashboard.js fills in the receipt id -->
+                        <div id="paidBanner" class="alert alert-success d-none" role="alert">
+                            Payment received &mdash; receipt #<span id="receiptId"></span>
                         </div>
-                    </section>
-                </div>
+
+                        <!-- This section starts VISIBLE, holding placeholders at the same
+                             dimensions the real values will occupy. The data still has to be
+                             fetched, but the page keeps its shape from the first frame and
+                             nothing jumps when the numbers land. dashboard.js hides this and
+                             reveals #pickPlanPrompt instead when there is no subscription. -->
+                        <div id="myPlanSection" class="placeholder-glow">
+                            <!-- the three figures worth acting on. each is a card; the
+                                 .stretched-link expands to cover the whole card -->
+                            <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3">
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <p class="text-uppercase small fw-semibold text-body-secondary mb-1">Plan</p>
+                                            <p class="fs-4 fw-semibold lh-1 mb-1" id="planName"><span class="placeholder col-7"></span></p>
+                                            <p class="small text-body-secondary mb-0" id="planPrice"><span class="placeholder col-5"></span></p>
+                                            <a href="/plans.html" class="stretched-link" aria-label="Change plan"></a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <p class="text-uppercase small fw-semibold text-body-secondary mb-1">Next bill</p>
+                                            <p class="fs-4 fw-semibold lh-1 mb-1" id="nextBillDue"><span class="placeholder col-6"></span></p>
+                                            <p class="small text-body-secondary mb-0" id="nextBillIn"><span class="placeholder col-4"></span></p>
+                                            <a href="/payments" class="stretched-link" aria-label="View billing history"></a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <p class="text-uppercase small fw-semibold text-body-secondary mb-1">Calls this period</p>
+                                            <p class="fs-4 fw-semibold lh-1 mb-1" id="totalCalls"><span class="placeholder col-5"></span></p>
+                                            <p class="small text-body-secondary mb-0" id="apiCount"><span class="placeholder col-6"></span></p>
+                                            <a href="/usage" class="stretched-link" aria-label="View the full call log"></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="text-body-secondary small mb-0">Member since <span id="planSince"><span class="placeholder col-1"></span></span></p>
+                        </div>
+
+                        <div id="pickPlanPrompt" class="d-none">
+                            <h2 class="h5">No plan yet</h2>
+                            <p>You don't have a plan. Pick one to get started!</p>
+                            <p><a href="/plans.html">Pick a plan</a></p>
+                        </div>
+
+                        <!-- also starts visible, with skeleton rows so the block has height
+                             before data lands. replaceChildren clears them on first render -->
+                        <div id="usageSection" class="placeholder-glow">
+                            <hr>
+                            <h2 class="h5 mb-0">API Usage</h2>
+                            <!-- the dates the numbers below cover, so "4,100 calls" has a
+                                 timeframe attached -->
+                            <p class="small text-body-secondary" id="usagePeriod"><span class="placeholder col-3"></span></p>
+                            <div id="usageList">
+                                <div class="mb-3">
+                                    <p class="mb-1"><span class="placeholder col-4"></span></p>
+                                    <div class="progress" style="--bs-progress-height: .625rem"><div class="progress-bar bg-secondary" style="width: 0%"></div></div>
+                                </div>
+                                <div class="mb-3">
+                                    <p class="mb-1"><span class="placeholder col-3"></span></p>
+                                    <div class="progress" style="--bs-progress-height: .625rem"><div class="progress-bar bg-secondary" style="width: 0%"></div></div>
+                                </div>
+                                <div class="mb-3">
+                                    <p class="mb-1"><span class="placeholder col-5"></span></p>
+                                    <div class="progress" style="--bs-progress-height: .625rem"><div class="progress-bar bg-secondary" style="width: 0%"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- status badges, cloned by dashboard.js. keeping the markup here
+                             means the SVGs stay readable instead of becoming createElementNS
+                             calls, and the icon+label pairing is visible in the HTML -->
+                        <template id="warningBadge">
+                            <span class="badge text-bg-warning d-inline-flex align-items-center gap-1">
+                                <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M8 1.6 15 14H1L8 1.6Z" fill="none" stroke="currentColor"
+                                          stroke-width="1.7" stroke-linejoin="round"/>
+                                    <path d="M8 6.2v3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                    <circle cx="8" cy="11.9" r="0.9" fill="currentColor"/>
+                                </svg>
+                                Near limit
+                            </span>
+                        </template>
+
+                        <template id="criticalBadge">
+                            <span class="badge text-bg-danger d-inline-flex align-items-center gap-1">
+                                <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden="true">
+                                    <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                                    <path d="M3.6 3.6l8.8 8.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                </svg>
+                                Limit reached
+                            </span>
+                        </template>
+
+                        <!-- form-level errors (server trouble) -- text is filled in by dashboard.js -->
+                        <span class="invisible text-danger small d-block mb-2" id="form-error" aria-live="polite"></span>
+                    </div>
+                </section>
             </div>
         </div>
     </main>
 
-    <footer class="text-center py-3 text-muted">
-        <p class="mb-0"><a href="about.html">About us</a></p>
+    <footer class="bg-body-tertiary border-top py-3">
+        <div class="container text-center text-body-secondary small">
+            <p class="mb-0">Phone Co &mdash; a learning project, not a real service.</p>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

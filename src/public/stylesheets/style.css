@@ -1,32 +1,24 @@
-/* Bootstrap handles all the layout/styling now.
-   This file only keeps the couple of helpers Bootstrap doesn't give us. */
+/* Bootstrap handles the layout, the components and the dark theme.
+   This file is deliberately near-empty -- anything added here should be
+   something Bootstrap genuinely does not provide, with a comment saying why.
 
-/* the page JS toggles .hidden on whole sections that show up later
-   (payment form, dashboard sections, receipt banner).
-   Bootstrap uses .d-none for this, but our JS already uses .hidden,
-   so keep this one rule instead of changing all the JS. */
-.hidden {
-  display: none !important;
-}
+   Things that used to live here and no longer need to:
+     .hidden          -> Bootstrap's .d-none
+     .form-card       -> the grid (.row > .col-lg-5)
+     body/main flex   -> .d-flex .flex-column .min-vh-100 on body, .flex-grow-1 on main
+     .kpi-* tiles     -> .card + text utilities
 
-/* .invisible (error spans that keep their space) is NOT defined here --
-   Bootstrap already ships an .invisible class that does the same thing. */
+   Dark mode is data-bs-theme="dark" on <html>, not CSS. Component colours are
+   restyled by setting their --bs-* variables, not by writing new rules. */
 
-/* keep the footer pinned to the bottom on short pages */
-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
+/* ---- signed-in / signed-out visibility -----------------------------------
+   The <head> script on every page stamps .auth-in or .auth-out on <html> from
+   the signed_in cookie, BEFORE the body paints. These two rules then decide
+   what survives, so the navbar is right on the first frame instead of being
+   briefly wrong while a fetch resolves.
 
-main {
-  flex: 1 0 auto;
-}
-
-/* the single-card auth pages (login/register) center one card with flex
-   utilities instead of the grid -- this just caps how wide that card gets,
-   which is the one thing the old col-* classes were doing for us. */
-.form-card {
-  width: 100%;
-  max-width: 24rem;
-}
+   Bootstrap has no equivalent: .d-none is a fixed decision, and this one
+   depends on state that only exists at runtime. Hence the only handwritten
+   rules in this file. */
+.auth-in  [data-auth="out"] { display: none !important; }
+.auth-out [data-auth="in"]  { display: none !important; }

@@ -56,6 +56,99 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
+  // the billing cycle the user is currently inside: the most recent payment's
+  // period_start, and the same date a month later (when the next bill lands
+  // and the usage quotas reset)
+  findCurrentPeriod: async (subscriptionId) => {
+    const rows = await sql`
+      SELECT period_start,
+             (period_start + interval '1 month')::date AS next_bill_due
+      FROM payment_history
+      WHERE subscription_id = ${subscriptionId}
+      ORDER BY period_start DESC
+      LIMIT 1`;
+    return rows[0];
+  },
+
+  // every payment the user has ever made, newest first. the join runs through
+  // ALL of their subscriptions, not just the active one -- after a plan change
+  // older payments hang off the previous subscription_id, and dropping them
+  // would silently shorten their billing history.
+  // plans is a LEFT JOIN because subscriptions.plan_id is nullable: a payment
+  // should still appear even if its plan can't be named
+  findPaymentHistory: async (userId) => {
+    return await sql`
+      SELECT ph.payment_id,
+             ph.amount_paid,
+             ph.paid_at,
+             ph.period_start,
+             ph.card_last4,
+             p.plan_name
+      FROM payment_history ph
+      JOIN subscriptions s ON s.subscription_id = ph.subscription_id
+      LEFT JOIN plans p    ON p.plan_id = s.plan_id
+      WHERE s.user_id = ${userId}
+      ORDER BY ph.paid_at DESC`;
+  },
+
+  findPlanById: async (planId) => {
+    const rows = await sql`
+      SELECT plan_id, plan_name, price_per_month
+      FROM plans
+      WHERE plan_id = ${planId}`;
+    return rows[0];
+  },
+
+  // which APIs a plan grants, and how many calls each one allows.
+  // a product with no row here is not part of the plan at all
+  findPlanApiLimits: async (planId) => {
+    return await sql`
+      SELECT ap.api_product_id,
+             ap.api_name,
+             l.monthly_limit::int AS monthly_limit
+      FROM plan_api_limits l
+      JOIN api_products ap ON ap.api_product_id = l.api_product_id
+      WHERE l.plan_id = ${planId}
+      ORDER BY ap.api_name`;
+  },
+
+  // one page of individual calls, newest first.
+  //
+  // keyset pagination, not OFFSET: api_usage_id only ever increases, so "the next
+  // page is the rows below this id" is an index seek no matter how deep you go,
+  // where OFFSET 10000 makes postgres walk and discard ten thousand rows first.
+  // it also can't skip or repeat a row when new calls arrive mid-paging.
+  //
+  // the IS NULL branch handles the first page, so there is one query rather than
+  // two nearly identical ones
+  findUsageLog: async (userId, before, limit) => {
+    return await sql`
+      SELECT u.api_usage_id,
+             u.used_at,
+             ap.api_name
+      FROM api_usage u
+      JOIN api_products ap ON ap.api_product_id = u.api_product_id
+      WHERE u.user_id = ${userId}
+        AND (${before}::bigint IS NULL OR u.api_usage_id < ${before}::bigint)
+      ORDER BY u.api_usage_id DESC
+      LIMIT ${limit}`;
+  },
+
+  // calls made in the current cycle, per API. products the user never called
+  // are simply absent from the result -- the service fills those in as 0.
+  // ::int because COUNT() and monthly_limit are int8, which postgres.js hands
+  // back as strings to protect precision
+  countUsageByProduct: async (userId, periodStart) => {
+    return await sql`
+      SELECT api_product_id,
+             COUNT(*)::int AS calls_used
+      FROM api_usage
+      WHERE user_id = ${userId}
+        AND used_at >= ${periodStart}::date
+        AND used_at <  ${periodStart}::date + interval '1 month'
+      GROUP BY api_product_id`;
+  },
+
   subscribeToPlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
     try {
       return await sql.begin((sql) =>
