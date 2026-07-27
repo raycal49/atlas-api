@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env ./src/www.js",
     "dev": "node --watch --env-file-if-exists=.env ./src/www.js",
+    "seed:usage": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js",
     "test": "vitest"
   },
   "dependencies": {
