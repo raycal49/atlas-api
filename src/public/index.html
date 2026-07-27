@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,39 +9,80 @@
     <title>Phone Co</title>
 </head>
 
-<body>
+<!-- d-flex/flex-column/min-vh-100 here plus flex-grow-1 on main is Bootstrap's
+     sticky footer: the footer sits at the bottom on short pages and flows after
+     the content on long ones, with no custom CSS -->
+<body class="d-flex flex-column min-vh-100">
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container">
-                <a class="navbar-brand" href="index.html">Phone Co</a>
+                <a class="navbar-brand" href="/index.html">Phone Co</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navLinks"
                         aria-controls="navLinks" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navLinks">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-                        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
-                        <li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/plans.html">Plans</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/login.html">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/register.html">Register</a></li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
 
-    <main>
-        <div class="container py-5 text-center">
-            <h1 class="display-5 fw-bold">Welcome to Phone Co</h1>
-            <p class="lead text-muted">Simple phone plans, no surprises. Sign in to manage yours.</p>
-            <div class="mt-4">
-                <a href="login.html" class="btn btn-primary btn-lg me-2">Login</a>
-                <a href="register.html" class="btn btn-outline-secondary btn-lg">Register</a>
+    <!-- main is the container itself; wrapping it in another div would just add
+         a level of nesting for nothing -->
+    <main class="container flex-grow-1 py-5 text-center">
+        <h1 class="display-5 fw-bold">Geospatial APIs, priced simply</h1>
+        <p class="lead text-body-secondary">
+            Geocoding, routing and maps behind one key. Pick a plan, watch your usage, no surprises.
+        </p>
+        <div class="mt-4">
+            <a href="/login.html" class="btn btn-primary btn-lg me-2">Login</a>
+            <a href="/register.html" class="btn btn-outline-secondary btn-lg">Register</a>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center mt-5 text-start">
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="card-title h5">Geocoding</h2>
+                        <p class="card-text text-body-secondary mb-0">
+                            Turn addresses into coordinates and back again.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="card-title h5">Directions</h2>
+                        <p class="card-text text-body-secondary mb-0">
+                            Routing and travel times between any two points.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="card-title h5">Static Maps</h2>
+                        <p class="card-text text-body-secondary mb-0">
+                            Rendered map images you can drop straight into a page.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
 
-    <footer class="text-center py-3 text-muted">
-        <p class="mb-0"><a href="about.html">About us</a></p>
+    <footer class="bg-body-tertiary border-top py-3">
+        <div class="container text-center text-body-secondary small">
+            <p class="mb-0">Phone Co &mdash; a learning project, not a real service.</p>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

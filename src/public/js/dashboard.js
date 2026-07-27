@@ -72,7 +72,7 @@ const renderKpis = (usage, plan) => {
 const renderUsage = (apis) => {
     if (apis.length === 0) {
         const empty = document.createElement("p");
-        empty.className = "text-muted mb-0";
+        empty.className = "text-body-secondary mb-0";
         empty.textContent = "Your plan doesn't include any APIs yet.";
         usageList.replaceChildren(empty);
         return;
@@ -93,7 +93,7 @@ const renderUsage = (apis) => {
         name.textContent = api.api_name;
 
         const counts = document.createElement("p");
-        counts.className = "mb-1 small text-muted";
+        counts.className = "mb-1 small text-body-secondary";
         counts.textContent =
             `${api.calls_used} / ${api.monthly_limit} calls used — ${api.calls_remaining} left`;
 
@@ -146,7 +146,7 @@ async function loadDashboard() {
         // subscription response is supposed to hold the user's subscription
         // if it doesn't, then we reveal pick plan prompt and return from the function here
         if (!subscription) {
-            pickPlanPrompt.classList.remove("hidden");
+            pickPlanPrompt.classList.remove("d-none");
             return;
         }
 
@@ -163,10 +163,10 @@ async function loadDashboard() {
         if (usage) {
             renderKpis(usage, plan);
             renderUsage(usage.apis);
-            usageSection.classList.remove("hidden");
+            usageSection.classList.remove("d-none");
         }
 
-        myPlanSection.classList.remove("hidden");
+        myPlanSection.classList.remove("d-none");
     } catch (e) {
         console.error(e);
         showFormError("Could not load your dashboard. Please refresh.");
@@ -180,7 +180,7 @@ const showReceiptIfJustPaid = () => {
     if (!paymentId) return;
 
     document.querySelector("#receiptId").textContent = paymentId;
-    paidBanner.classList.remove("hidden");
+    paidBanner.classList.remove("d-none");
 
     // strip ?paid= from the address bar so a refresh doesn't re-show the banner
     history.replaceState(null, "", "/dashboard");

@@ -16,7 +16,7 @@ const choosePlan = (planName) => {
     selectedPlan = planName;
     chosenPlanName.textContent = planName;
     hideErrors(FIELDS);
-    paymentForm.classList.remove("hidden");
+    paymentForm.classList.remove("d-none");
     paymentForm.scrollIntoView({ behavior: "smooth" });
 }
 
@@ -45,7 +45,7 @@ const renderPlans = (plans) => {
         price.textContent = `$${plan.price_per_month} / month`;
 
         const description = document.createElement("p");
-        description.className = "card-text text-muted";
+        description.className = "card-text text-body-secondary";
         description.textContent = plan.description ?? "";
 
         const chooseBtn = document.createElement("button");
