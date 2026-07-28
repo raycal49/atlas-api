@@ -7,7 +7,7 @@ export const listValidationErrors = (issues) => {
   return validationErrors;
 }
 
-export const validate = (schema) => (req, res, next) => {
+export const validateBody = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body ?? {});
 
   // 

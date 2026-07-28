@@ -179,6 +179,9 @@ async function loadDashboard() {
         document.querySelector("#planSince").textContent =
             new Date(subscription.started_at).toLocaleDateString();
 
+        // if a user isn't supposed to be able to see his API calls because HE HAS NONE,
+        // then he probably shouldn't even be able to access it
+        
         // usage is non-null whenever a subscription is, but guard anyway so a
         // surprise here can't leave the tiles shimmering forever
         if (usage) {

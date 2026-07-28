@@ -20,11 +20,11 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ usage });
   },
 
-  getMyUsageLog: async (req, res) => {
+  getMyAPILog: async (req, res) => {
     // validateQuery parsed and defaulted these; req.query itself is untouched
     const { before, limit } = req.validatedQuery;
 
-    const log = await userServices.getUsageLog(req.tokenInfo.id, before, limit);
+    const log = await userServices.getAllAPICalls(req.tokenInfo.id, before, limit);
 
     return res.status(200).json({ log });
   },
