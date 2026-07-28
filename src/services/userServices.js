@@ -99,7 +99,7 @@ export const createUserServices = (userRepo) => ({
     return { payments, upcoming };
   },
 
-  getApiCallsForPeriod: async(userId) => {
+  getApiCallsForPeriod: async (userId) => {
     const subscription = await userRepo.findActiveSubscription(userId);
     if (!subscription) return null;
 
