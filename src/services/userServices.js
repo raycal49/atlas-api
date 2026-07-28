@@ -54,6 +54,29 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findActiveSubscription(userId) ?? null;
   },
 
+  getDashboardMetrics: async (userId) => {
+    // has subscription.subscription_id, subscription.plan_id, subscription.started_at
+    const subscription = await userRepo.findActiveSubscription(userId);
+    if (!subscription) return null;
+
+    // has planData.plan_id, planData.plan_name, and planeData.price_per_month
+    const subscribedPlan = await userRepo.findPlanById(subscription.plan_id)
+
+    const currentPeriod = await userRepo.findCurrentPeriod(subscription.subscription_id);
+
+    const apiData = await userRepo.getPeriodApiCalls(userId, currentPeriod.period_start, subscription.plan_id); // NECESSARY ITEM 3
+    
+    const dashboardData = {
+      plan: subscribedPlan.plan_name,
+      price: subscribedPlan.price_per_month,
+      due_date: currentPeriod.next_bill_due,
+      calls: apiData.calls_used,
+      limit: apiData.monthly_limit
+    }
+
+    return dashboardData;
+  },
+
   getPlans: async () => {
     return await userRepo.findAllActivePlans();
   },
