@@ -1,39 +1,5 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
 
-// when an API is close enough to its quota to warn about, and when it is spent.
-// these are product rules, not styling -- the same thresholds would decide
-// whether to send a "you're running low" email, so they live here rather than
-// in the browser
-const WARNING_AT = 80;
-const CRITICAL_AT = 100;
-
-// capped at 100 so an over-limit API can't report 130% (and overflow a bar);
-// the limit > 0 guard keeps a zero quota from dividing to Infinity
-const percentOf = (used, limit) =>
-  limit > 0 ? Math.min(Math.round((used / limit) * 100), 100) : 0;
-
-const stateFor = (percent) =>
-  percent >= CRITICAL_AT ? 'critical' : percent >= WARNING_AT ? 'warning' : 'ok';
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-// whole days from today until a billing date. both sides are flattened to UTC
-// midnight first: next_bill_due is a calendar date, not an instant, so comparing
-// it against a local clock would tip the answer by a day either side of midnight
-const daysUntil = (value) => {
-  if (!value) return null;
-
-  const due = new Date(value);
-  if (Number.isNaN(due.getTime())) return null;
-
-  const dueMidnight = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-
-  const now = new Date();
-  const todayMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-
-  return Math.round((dueMidnight - todayMidnight) / MS_PER_DAY);
-};
-
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const plan = await userRepo.findActivePlanByName(planName);
@@ -70,9 +36,7 @@ export const createUserServices = (userRepo) => ({
       price: subscribedPlan.price_per_month,
       bill_start: currentPeriod.period_start,
       bill_due: currentPeriod.next_bill_due,
-      name: apiData.api_name,
-      calls: apiData.calls_used,
-      limit: apiData.monthly_limit
+      apis: apiData
     }
 
     return data;
