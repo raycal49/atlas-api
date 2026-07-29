@@ -67,24 +67,33 @@
                     <div class="card-body">
 
                         <!-- table-responsive keeps a wide table scrolling inside its own
-                             box instead of pushing the page sideways on a phone -->
-                        <div class="table-responsive placeholder-glow" id="logTableWrap">
-                            <table class="table table-hover align-middle mb-0">
+                             box instead of pushing the page sideways on a phone. log-scroll
+                             adds the vertical half: it caps the height so a page of rows
+                             scrolls in here rather than growing the document.
+
+                             A scrollable box has to be reachable by keyboard, hence
+                             tabindex/role/aria-label -- it is the region usage.js moves focus
+                             to after a page change. -->
+                        <div class="table-responsive log-scroll placeholder-glow" id="logTableWrap"
+                             tabindex="0" role="region" aria-label="Call log">
+                            <table class="table table-sm table-hover align-middle mb-0">
                                 <caption class="visually-hidden">Your API calls, newest first</caption>
+                                <!-- the background sits on each th, not on thead: Bootstrap paints
+                                     per-cell backgrounds, so a bare thead loses and the body rows
+                                     would scroll through the sticky header instead of behind it -->
                                 <thead>
                                     <tr>
-                                        <th scope="col">When</th>
-                                        <th scope="col">API</th>
+                                        <th scope="col" class="bg-body-tertiary">When</th>
+                                        <th scope="col" class="bg-body-tertiary">API</th>
                                     </tr>
                                 </thead>
                                 <!-- skeleton rows so the table has height before data lands.
-                                     usage.js appends pages, so it clears these explicitly on
-                                     the first render rather than relying on replaceChildren -->
+                                     usage.js renders with replaceChildren, which clears these
+                                     on the first real page -->
                                 <tbody id="logBody">
                                     <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-4"></span></td></tr>
                                     <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-5"></span></td></tr>
                                     <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-3"></span></td></tr>
-                                    <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-5"></span></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -93,11 +102,22 @@
                             No calls recorded yet.
                         </p>
 
+                        <!-- the pager lives outside the scroll box, so it stays put while the
+                             rows scroll. Buttons rather than anchors: this pager is driven by
+                             JavaScript, so it gets real disabled semantics instead of the
+                             tabindex="-1" + aria-disabled workaround anchors need. -->
                         <div class="d-flex align-items-center gap-3 mt-3">
-                            <button id="loadMore" type="button" class="btn btn-outline-secondary d-none">
-                                Load more
-                            </button>
-                            <span class="small text-body-secondary" id="loadedCount" aria-live="polite"></span>
+                            <nav aria-label="Call log pages" id="pager" class="d-none">
+                                <ul class="pagination pagination-sm justify-content-end mb-0">
+                                    <li class="page-item" id="prevItem">
+                                        <button type="button" class="page-link" id="prevPage">Previous</button>
+                                    </li>
+                                    <li class="page-item" id="nextItem">
+                                        <button type="button" class="page-link" id="nextPage">Next</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <span class="small text-body-secondary" id="pageStatus" aria-live="polite"></span>
                         </div>
 
                         <!-- form-level errors (server trouble) -- text is filled in by usage.js -->
