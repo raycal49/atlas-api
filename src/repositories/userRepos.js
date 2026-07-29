@@ -121,7 +121,7 @@ export const createUserRepository = (sql) => ({
   //
   // the IS NULL branch handles the first page, so there is one query rather than
   // two nearly identical ones
-  findUsageLog: async (userId, before, limit) => {
+  findTotalApiCalls: async (userId, before, limit) => {
     return await sql`
       SELECT u.api_usage_id,
              u.used_at,
@@ -132,6 +132,25 @@ export const createUserRepository = (sql) => ({
         AND (${before}::bigint IS NULL OR u.api_usage_id < ${before}::bigint)
       ORDER BY u.api_usage_id DESC
       LIMIT ${limit}`;
+  },
+
+  getPeriodApiCalls: async (userId, periodStart, planId) => {
+    return await sql`
+    SELECT ap.api_product_id,
+           ap.api_name,
+           l.monthly_limit::int AS monthly_limit,
+           (
+              SELECT COUNT(*)::int
+                  FROM api_usage u
+                  WHERE u.user_id = ${userId}
+                  AND u.api_product_id = l.api_product_id
+                  AND u.used_at >= ${periodStart}::date
+                  AND u.used_at <  ${periodStart}::date + interval '1 month'
+            ) AS calls_used
+    FROM plan_api_limits l
+    JOIN api_products ap ON ap.api_product_id = l.api_product_id
+    WHERE l.plan_id = ${planId}
+    ORDER BY ap.api_name`
   },
 
   // calls made in the current cycle, per API. products the user never called

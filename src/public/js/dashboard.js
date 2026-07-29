@@ -1,5 +1,5 @@
 import { getJson } from "./api.js";
-import { showFormError, formatCount } from "./ui.js";
+import { showFormError, formatCount, formatMoney } from "./ui.js";
 
 const myPlanSection = document.querySelector("#myPlanSection");
 const pickPlanPrompt = document.querySelector("#pickPlanPrompt");
@@ -7,11 +7,31 @@ const paidBanner = document.querySelector("#paidBanner");
 const usageSection = document.querySelector("#usageSection");
 const usageList = document.querySelector("#usageList");
 
-// the server decides which state an API is in; this maps that decision onto
-// Bootstrap's own tokens. the -bg-subtle variables are the same hue as the solid
-// one, a few steps lighter, and Bootstrap redefines them for dark mode -- which
-// is exactly the "track is a lighter step of the fill's own ramp" rule, already
-// themed, with no CSS from us
+const WARNING_AT = 80;
+const CRITICAL_AT = 100;
+
+const percentOf = (used, limit) =>
+    limit > 0 ? Math.min(Math.round((used / limit) * 100), 100) : 0;
+
+const stateFor = (percent) =>
+    percent >= CRITICAL_AT ? "critical" : percent >= WARNING_AT ? "warning" : "ok";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const daysUntil = (value) => {
+    if (!value) return null;
+
+    const due = new Date(value);
+    if (Number.isNaN(due.getTime())) return null;
+
+    const dueMidnight = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+
+    const now = new Date();
+    const todayMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    return Math.round((dueMidnight - todayMidnight) / MS_PER_DAY);
+};
+
 const STATE = {
     ok: {
         fill: "var(--bs-primary)",
@@ -29,8 +49,6 @@ const STATE = {
     },
 };
 
-// a calendar date rendered in UTC -- these are dates, not instants, so using the
-// local clock would slide them a day for anyone west of UTC
 const monthDay = (value) =>
     new Date(value).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" });
 
@@ -49,27 +67,36 @@ const daysLabel = (days) => {
     return `in ${days} days`;
 }
 
-// the three tiles are fixed structure with only their values changing, so the
-// markup lives in dashboard.html and this just fills the spans. createElement is
-// for lists whose length comes from the data -- see renderUsage below
-const renderKpis = (usage, plan) => {
-    document.querySelector("#planName").textContent = plan?.plan_name ?? "(plan no longer offered)";
-    document.querySelector("#planPrice").textContent = plan ? `$${plan.price_per_month} / month` : "";
+const toApiRow = (api) => {
+    const percentUsed = percentOf(api.calls_used, api.monthly_limit);
 
-    document.querySelector("#nextBillDue").textContent = usage.next_bill_due
-        ? monthDay(usage.next_bill_due)
+    return {
+        api_name: api.api_name,
+        monthly_limit: api.monthly_limit,
+        calls_used: api.calls_used,
+        calls_remaining: Math.max(api.monthly_limit - api.calls_used, 0),
+        percent_used: percentUsed,
+        state: stateFor(percentUsed),
+    };
+};
+
+const renderKpis = (data, apis) => {
+    document.querySelector("#planName").textContent = data.plan ?? "—";
+    document.querySelector("#planPrice").textContent = `${formatMoney(data.price)} / month`;
+
+    document.querySelector("#nextBillDue").textContent = data.bill_due
+        ? monthDay(data.bill_due)
         : "—";
 
-    document.querySelector("#nextBillIn").textContent = daysLabel(usage.days_until_next_bill);
+    document.querySelector("#nextBillIn").textContent = daysLabel(daysUntil(data.bill_due));
 
-    document.querySelector("#totalCalls").textContent = formatCount(usage.total_calls);
+    const totalCalls = apis.reduce((sum, api) => sum + api.calls_used, 0);
+
+    document.querySelector("#totalCalls").textContent = formatCount(totalCalls);
     document.querySelector("#apiCount").textContent =
-        `across ${usage.api_count} API${usage.api_count === 1 ? "" : "s"}`;
+        `across ${apis.length} API${apis.length === 1 ? "" : "s"}`;
 }
 
-// one row per API in the plan: name, the used/limit counts, and a bar so the
-// state is readable without reading the numbers. built with
-// createElement/textContent so api names are always treated as text, never HTML
 const renderUsage = (apis) => {
     if (apis.length === 0) {
         const empty = document.createElement("p");
@@ -79,8 +106,6 @@ const renderUsage = (apis) => {
         return;
     }
 
-    // rows are assembled off-document and attached in one go: N appends to a live
-    // node means N chances to trigger layout, and this list grows with the plan
     const fragment = document.createDocumentFragment();
 
     for (const api of apis) {
@@ -90,7 +115,6 @@ const renderUsage = (apis) => {
         row.className = "mb-3";
         row.dataset.state = api.state;
 
-        // name on the left, counts on the right, sharing a baseline
         const head = document.createElement("div");
         head.className = "d-flex justify-content-between align-items-baseline gap-2 mb-1";
 
@@ -98,8 +122,6 @@ const renderUsage = (apis) => {
         name.className = "fw-semibold";
         name.textContent = api.api_name;
 
-        // status is never colour alone: warning and critical carry a written
-        // label and an icon, so the state survives colourblindness and greyscale
         if (state.badge) {
             const badge = document.querySelector(state.badge).content.firstElementChild.cloneNode(true);
             badge.classList.add("ms-2");
@@ -118,13 +140,10 @@ const renderUsage = (apis) => {
         track.setAttribute("aria-valuenow", api.percent_used);
         track.setAttribute("aria-valuemin", "0");
         track.setAttribute("aria-valuemax", "100");
-        // restyle the component by setting its own variables rather than writing
-        // rules for it -- these are the two Bootstrap already uses internally
+
         track.style.setProperty("--bs-progress-height", ".625rem");
         track.style.setProperty("--bs-progress-bg", state.track);
 
-        // rounded-end is a Bootstrap utility: square where the bar grows from,
-        // rounded at the data end
         const bar = document.createElement("div");
         bar.className = "progress-bar rounded-end";
         bar.style.setProperty("--bs-progress-bar-bg", state.fill);
@@ -136,72 +155,42 @@ const renderUsage = (apis) => {
         fragment.append(row);
     }
 
-    // replaceChildren, not append: rendering twice must produce the same list,
-    // not two of everything
     usageList.replaceChildren(fragment);
 }
 
-// the dashboard never assumes how you got here -- it asks the server what is
-// true right now and renders exactly one of its two states
-// dashboard has two hidden segments--the "my plan" section and the "plan picker" section
-// it unhides whichever section based off whether or not you have a plan or not
 async function loadDashboard() {
     try {
-        const [subData, plansData, usageData] = await Promise.all([
-            getJson("/subscriptions/me"),
-            getJson("/plans"),
-            getJson("/usage/me"),
-        ]);
+        const body = await getJson("/data");
+        if (!body) return;
 
-        // a null means getJson saw a 401 and the browser is already navigating
-        // to the login page -- there is nothing left to render
-        if (!subData || !plansData || !usageData) return;
+        const { dashboardData } = body;
 
-        const { subscription } = subData;
-        const { plans } = plansData;
-        const { usage } = usageData;
-
-        // the plan and usage sections render as skeletons from the first frame,
-        // which assumes the common case of a subscriber. without one, swap them
-        // for the prompt instead
-        if (!subscription) {
+        if (!dashboardData) {
             myPlanSection.classList.add("d-none");
             usageSection.classList.add("d-none");
             pickPlanPrompt.classList.remove("d-none");
             return;
         }
 
-        // from here on out, we know the user has a subscription and the subscription variable stores the plan id
-        // /subscriptions/me only knows the plan_id; the display details
-        // (name, price) come from matching it against the /plans list
-        const plan = plans.find((p) => p.plan_id === subscription.plan_id);
+        const apis = (dashboardData.apis ?? []).map(toApiRow);
+
+        renderKpis(dashboardData, apis);
 
         document.querySelector("#planSince").textContent =
-            new Date(subscription.started_at).toLocaleDateString();
+            new Date(dashboardData.plan_start).toLocaleDateString();
 
-        // usage is non-null whenever a subscription is, but guard anyway so a
-        // surprise here can't leave the tiles shimmering forever
-        if (usage) {
-            renderKpis(usage, plan);
+        document.querySelector("#usagePeriod").textContent =
+            periodLabel(dashboardData.bill_start, dashboardData.bill_due);
 
-            document.querySelector("#usagePeriod").textContent =
-                periodLabel(usage.period_start, usage.next_bill_due);
-
-            renderUsage(usage.apis);
-        } else {
-            usageSection.classList.add("d-none");
-        }
+        renderUsage(apis);
     } catch (e) {
         console.error(e);
-        // clear the skeletons too -- a shimmer that never resolves reads as a
-        // hang, where an error message reads as something the user can act on
         myPlanSection.classList.add("d-none");
         usageSection.classList.add("d-none");
         showFormError("Could not load your dashboard. Please refresh.");
     }
 }
 
-// after a successful payment, plans.js redirects here with ?paid=<receipt id>
 const showReceiptIfJustPaid = () => {
     const paymentId = new URLSearchParams(window.location.search).get("paid");
 
@@ -210,7 +199,6 @@ const showReceiptIfJustPaid = () => {
     document.querySelector("#receiptId").textContent = paymentId;
     paidBanner.classList.remove("d-none");
 
-    // strip ?paid= from the address bar so a refresh doesn't re-show the banner
     history.replaceState(null, "", "/dashboard");
 }
 
