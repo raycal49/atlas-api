@@ -28,22 +28,86 @@ let pageIndex = 0;
 let nextBefore = null;
 
 // used_at is a real instant, so the local clock is the right thing to show it in
-const timestamp = (value) => new Date(value).toLocaleString();
+const absolute = (value) => new Date(value).toLocaleString();
+
+// the day a group of rows falls on -- "Mon, 20 Jul"
+const dayLabel = (value) =>
+    new Date(value).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+
+const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "short" });
+
+// largest unit first, so an hour and a half reads as an hour rather than 90 minutes
+const UNITS = [
+    ["day", 86400000],
+    ["hour", 3600000],
+    ["minute", 60000],
+    ["second", 1000],
+];
+
+const WEEK_MS = 7 * 86400000;
+
+// a recent call is easier to place as a distance ("3 min. ago") than as a date,
+// but that stops being true within about a week -- past that the date itself is
+// the useful part. A clock skewed into the future falls back to the date too.
+const timestamp = (value) => {
+    const elapsed = Date.now() - new Date(value).getTime();
+    if (elapsed < 0 || elapsed >= WEEK_MS) return absolute(value);
+
+    for (const [unit, ms] of UNITS) {
+        if (elapsed >= ms || unit === "second") return relative.format(-Math.floor(elapsed / ms), unit);
+    }
+}
+
+// a full-width header row whenever the calendar day changes, which is the only
+// structure this table can gain without a schema change. Groups restart on each
+// page, which is what a paged view should do
+const dayRow = (value) => {
+    const row = document.createElement("tr");
+
+    const heading = document.createElement("th");
+    heading.colSpan = 2;
+    heading.scope = "colgroup";
+    heading.className = "bg-body-tertiary small text-body-secondary";
+    heading.textContent = dayLabel(value);
+
+    row.append(heading);
+    return row;
+}
 
 // one row per call, built with createElement/textContent so api names are always
 // treated as text and never as HTML
 const renderCalls = (calls) => {
     const fragment = document.createDocumentFragment();
+    let currentDay = null;
 
     for (const call of calls) {
+        // toDateString collapses an instant to its local calendar day, which is the
+        // same basis the group label is rendered on
+        const day = new Date(call.used_at).toDateString();
+        if (day !== currentDay) {
+            currentDay = day;
+            fragment.append(dayRow(call.used_at));
+        }
+
         const row = document.createElement("tr");
 
         const when = document.createElement("td");
         when.className = "text-nowrap";
-        when.textContent = timestamp(call.used_at);
+        // the relative text is the readable form, but datetime keeps the machine
+        // one and title puts the absolute time a hover away
+        const time = document.createElement("time");
+        time.dateTime = new Date(call.used_at).toISOString();
+        time.title = absolute(call.used_at);
+        time.textContent = timestamp(call.used_at);
+        when.append(time);
 
         const api = document.createElement("td");
-        api.textContent = call.api_name;
+        // a badge gives the eye a fixed shape to scan down. Deliberately one neutral
+        // colour: a per-product palette needs a checked contrast set, not a guess
+        const badge = document.createElement("span");
+        badge.className = "badge text-bg-secondary";
+        badge.textContent = call.api_name;
+        api.append(badge);
 
         row.append(when, api);
         fragment.append(row);
