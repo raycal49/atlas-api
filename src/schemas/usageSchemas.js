@@ -17,6 +17,6 @@ export const usageLogQuerySchema = z
       .int('Limit must be a whole number')
       .min(1, 'Limit must be at least 1')
       .max(100, 'Limit must be at most 100')
-      .default(50),
+      .default(25), // matches PAGE_SIZE in public/js/usage.js
   })
   .strict(); // reject unexpected keys instead of silently stripping them
