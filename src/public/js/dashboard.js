@@ -147,16 +147,17 @@ const renderUsage = (apis) => {
 // it unhides whichever section based off whether or not you have a plan or not
 async function loadDashboard() {
     try {
-        const [subData, plansData, usageData] = await Promise.all([
-            getJson("/subscriptions/me"),
-            getJson("/plans"),
-            getJson("/usage/me"),
-        ]);
+        // const [subData, plansData, usageData] = await Promise.all([
+        //     getJson("/subscriptions/me"),
+        //     getJson("/plans"),
+        //     getJson("/usage/me"),
+        const dashboardData = await getJson("/data");
 
         // a null means getJson saw a 401 and the browser is already navigating
         // to the login page -- there is nothing left to render
         if (!subData || !plansData || !usageData) return;
 
+        // due to the if-statement above, we will literally NEVER have a case where !subscription
         const { subscription } = subData;
         const { plans } = plansData;
         const { usage } = usageData;

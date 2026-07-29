@@ -134,7 +134,7 @@ export const createUserRepository = (sql) => ({
       LIMIT ${limit}`;
   },
 
-  getPeriodAPICalls: async (userId, periodStart, planId) => {
+  getPeriodApiCalls: async (userId, periodStart, planId) => {
     return await sql`
     SELECT ap.api_product_id,
            ap.api_name,

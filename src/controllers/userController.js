@@ -5,11 +5,11 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ plans });
   },
 
-  getMySubscription: async (req, res) => {
-    const subscription = await userServices.getCurrentSubscription(req.tokenInfo.id);
+  getDashboardData: async (req, res) => {
+    const dashboardData = await userServices.getUserData(req.tokenInfo.id);
 
     // null when unsubscribed -- a normal state for the dashboard, not an error
-    return res.status(200).json({ subscription });
+    return res.status(200).json({ dashboardData });
   },
 
   getMonthlyApiCalls: async (req, res) => {
