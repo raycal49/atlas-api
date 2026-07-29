@@ -5,11 +5,34 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ plans });
   },
 
-  getMySubscription: async (req, res) => {
-    const subscription = await userServices.getCurrentSubscription(req.tokenInfo.id);
+  getDashboardData: async (req, res) => {
+    const dashboardData = await userServices.getUserData(req.tokenInfo.id);
 
     // null when unsubscribed -- a normal state for the dashboard, not an error
-    return res.status(200).json({ subscription });
+    return res.status(200).json({ dashboardData });
+  },
+
+  getMonthlyApiCalls: async (req, res) => {
+    const usage = await userServices.getApiCallsForPeriod(req.tokenInfo.id);
+
+    // null when unsubscribed, same as getMySubscription -- the dashboard shows
+    // the "pick a plan" prompt instead of a usage breakdown
+    return res.status(200).json({ usage });
+  },
+
+  getTotalApiCalls: async (req, res) => {
+    // validateQuery parsed and defaulted these; req.query itself is untouched
+    const { before, limit } = req.validatedQuery;
+
+    const log = await userServices.getAllAPICalls(req.tokenInfo.id, before, limit);
+
+    return res.status(200).json({ log });
+  },
+
+  getMyPayments: async (req, res) => {
+    const history = await userServices.getPaymentHistory(req.tokenInfo.id);
+
+    return res.status(200).json({ history });
   },
 
   getMyUsage: async (req, res) => {

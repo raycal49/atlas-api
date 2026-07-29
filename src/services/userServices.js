@@ -54,6 +54,28 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findActiveSubscription(userId) ?? null;
   },
 
+  getUserData: async (userId) => {
+    const subscription = await userRepo.findActiveSubscription(userId);
+    if (!subscription) return null;
+
+    const subscribedPlan = await userRepo.findPlanById(subscription.plan_id)
+
+    const currentPeriod = await userRepo.findCurrentPeriod(subscription.subscription_id);
+
+    const apiData = await userRepo.getPeriodApiCalls(userId, currentPeriod.period_start, subscription.plan_id); // NECESSARY ITEM 3
+    
+    const data = {
+      plan: subscribedPlan.plan_name,
+      plan_start: subscription.started_at,
+      price: subscribedPlan.price_per_month,
+      bill_start: currentPeriod.period_start,
+      bill_due: currentPeriod.next_bill_due,
+      apis: apiData
+    }
+
+    return data;
+  },
+
   getPlans: async () => {
     return await userRepo.findAllActivePlans();
   },
@@ -63,8 +85,8 @@ export const createUserServices = (userRepo) => ({
   // asks the repository for one row more than the caller wants: if that extra row
   // comes back there is another page, and the client gets a cursor. that is one
   // query instead of a second COUNT, and it never disagrees with the rows shown
-  getUsageLog: async (userId, before, limit) => {
-    const rows = await userRepo.findUsageLog(userId, before ?? null, limit + 1);
+  getAllAPICalls: async (userId, before, limit) => {
+    const rows = await userRepo.findTotalApiCalls(userId, before ?? null, limit + 1);
 
     const hasMore = rows.length > limit;
     const calls = hasMore ? rows.slice(0, limit) : rows;
@@ -99,53 +121,83 @@ export const createUserServices = (userRepo) => ({
     return { payments, upcoming };
   },
 
-  // everything the dashboard needs to answer "how much of my plan have I used
-  // this cycle, and when does the next bill land". null when the user has no
-  // plan -- the same "normal, not an error" state getCurrentSubscription uses
-  getUsageSummary: async (userId) => {
+  getApiCallsForPeriod: async (userId) => {
     const subscription = await userRepo.findActiveSubscription(userId);
     if (!subscription) return null;
+
+    const period = await userRepo.findCurrentPeriod(subscription.subscription_id);
+
+    const currentMonthCalls = await userRepo.getPeriodAPICalls(userId, period.periodStart, subscription.planId);
+
+    return currentMonthCalls;
+  },
+
+  // this is literally get me the usage this period
+  // getApiCallsForPeriod: async (userId) => {
+  //   const subscription = await userRepo.findActiveSubscription(userId);
+  //   if (!subscription) return null;
 
     // subscribing always writes a payment row, so a period normally exists;
     // falling back to the subscription's own start keeps this working if one
     // is ever missing
-    const period = await userRepo.findCurrentPeriod(subscription.subscription_id);
-    const periodStart = period?.period_start ?? subscription.started_at;
 
-    const [limits, counts] = await Promise.all([
-      userRepo.findPlanApiLimits(subscription.plan_id),
-      userRepo.countUsageByProduct(userId, periodStart),
-    ]);
+    // but... going off of most recent payment is sort of taking for granted that the most recent payment
+    // WILL be accurate, so to speak
+    // as it stands, we really don't have any way of *actually* billing the user for successive periods
+    // the user just pays once and that's it!
 
-    const usedByProduct = new Map(counts.map((row) => [row.api_product_id, row.calls_used]));
+    // we query the database to find most recent payment
+    // const period = await userRepo.findCurrentPeriod(subscription.subscription_id);
 
-    // the plan's API list drives the output, not the usage list -- so an API
-    // the user has never called still shows up, at 0. this is the whole reason
-    // countUsageByProduct can stay a plain COUNT with no outer join
-    const apis = limits.map((limit) => {
-      const callsUsed = usedByProduct.get(limit.api_product_id) ?? 0;
-      const percentUsed = percentOf(callsUsed, limit.monthly_limit);
+    // this line basically checks if there is a most recent period
+    // if there isn't, we instead go off of subscription.started_at 
+    // we will add 1 month to that and pay in that way
+    // const periodStart = period.period_start;
 
-      return {
-        api_product_id: limit.api_product_id,
-        api_name: limit.api_name,
-        monthly_limit: limit.monthly_limit,
-        calls_used: callsUsed,
-        calls_remaining: Math.max(limit.monthly_limit - callsUsed, 0),
-        percent_used: percentUsed,
-        state: stateFor(percentUsed),
-      };
-    });
+    // this holds the individual api limits in limits
+    // this also holds api calls the user has made grouped by the name of the api they called
+    // const [limits, counts] = await Promise.all([
+    //   // this gets the actual usage limits of the various APIs
+    //   userRepo.findPlanApiLimits(subscription.plan_id),
 
-    const nextBillDue = period?.next_bill_due ?? null;
+    //   // this looks at the api usage rows that have a user_id matching the user's input id--userId
+    //   // and then counts them, grouping them by the individual api_product_id's
+    //   userRepo.countUsageByProduct(userId, periodStart),
+    // ]);
 
-    return {
-      period_start: periodStart,
-      next_bill_due: nextBillDue,
-      days_until_next_bill: daysUntil(nextBillDue),
-      total_calls: apis.reduce((sum, api) => sum + api.calls_used, 0),
-      api_count: apis.length,
-      apis,
-    };
-  },
+    // const api_limits = limits.map(({api_name, monthly_limit}) => {api_name, monthly_limit});
+
+    // const api_calls = counts.map({api_product})
+
+    // const usedByProduct = new Map(counts.map((row) => [row.api_product_id, row.calls_used]));
+
+    // // the plan's API list drives the output, not the usage list -- so an API
+    // // the user has never called still shows up, at 0. this is the whole reason
+    // // countUsageByProduct can stay a plain COUNT with no outer join
+    // const apis = limits.map((limit) => {
+    //   const callsUsed = usedByProduct.get(limit.api_product_id) ?? 0;
+    //   const percentUsed = percentOf(callsUsed, limit.monthly_limit);
+
+    //   return {
+    //     api_product_id: limit.api_product_id,
+    //     api_name: limit.api_name,
+    //     monthly_limit: limit.monthly_limit,
+    //     calls_used: callsUsed,
+    //     calls_remaining: Math.max(limit.monthly_limit - callsUsed, 0),
+    //     percent_used: percentUsed,
+    //     state: stateFor(percentUsed),
+    //   };
+    // });
+
+    // const nextBillDue = period?.next_bill_due ?? null;
+
+    // return {
+    //   period_start: periodStart,
+    //   next_bill_due: nextBillDue,
+    //   days_until_next_bill: daysUntil(nextBillDue),
+    //   total_calls: apis.reduce((sum, api) => sum + api.calls_used, 0),
+    //   api_count: apis.length,
+    //   apis,
+    // };
+  // },
 });
