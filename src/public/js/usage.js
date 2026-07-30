@@ -1,205 +1,172 @@
 import { getJson } from "./api.js";
-import { showFormError, formatCount } from "./ui.js";
+import { showFormError } from "./ui.js";
 
+const filtersForm = document.querySelector("#filters");
+const apiSelect = document.querySelector("#api");
+const fromInput = document.querySelector("#from");
+const toInput = document.querySelector("#to");
 const logTableWrap = document.querySelector("#logTableWrap");
 const logBody = document.querySelector("#logBody");
 const noCalls = document.querySelector("#noCalls");
 const pager = document.querySelector("#pager");
-const prevItem = document.querySelector("#prevItem");
-const prevPage = document.querySelector("#prevPage");
-const nextItem = document.querySelector("#nextItem");
-const nextPage = document.querySelector("#nextPage");
 const pageStatus = document.querySelector("#pageStatus");
 
-const PAGE_SIZE = 25;
+// the page's whole state is the URL: filters and page number both live in the
+// query string, and every pager link is just this URL with a different page.
+// that is what makes Back, bookmarks and shared links work with no code
+const params = new URLSearchParams(location.search);
 
-// cursors[i] is the `before` value that produced page i. Page 0 is the newest
-// page and needs no cursor, hence null. Kept as an array rather than a single
-// "previous" value so a visited-page jump list stays cheap to add later.
-//
-// Stored cursors cannot go stale here: api_usage is append-only and we page
-// api_usage_id DESC, so new rows can only ever appear above page 0 -- a cursor
-// returns the same rows on every revisit.
-const cursors = [null];
-let pageIndex = 0;
-
-// the id to page below on the next request. null once the server says there is
-// nothing further, which is what disables Next
-let nextBefore = null;
+const pageHref = (page) => {
+    const next = new URLSearchParams(params);
+    next.set("page", String(page));
+    return `/usage?${next}`;
+};
 
 // used_at is a real instant, so the local clock is the right thing to show it in
-const absolute = (value) => new Date(value).toLocaleString();
+const when = (value) => new Date(value).toLocaleString();
 
-// the day a group of rows falls on -- "Mon, 20 Jul"
-const dayLabel = (value) =>
-    new Date(value).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-
-const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "short" });
-
-// largest unit first, so an hour and a half reads as an hour rather than 90 minutes
-const UNITS = [
-    ["day", 86400000],
-    ["hour", 3600000],
-    ["minute", 60000],
-    ["second", 1000],
-];
-
-const WEEK_MS = 7 * 86400000;
-
-// a recent call is easier to place as a distance ("3 min. ago") than as a date,
-// but that stops being true within about a week -- past that the date itself is
-// the useful part. A clock skewed into the future falls back to the date too.
-const timestamp = (value) => {
-    const elapsed = Date.now() - new Date(value).getTime();
-    if (elapsed < 0 || elapsed >= WEEK_MS) return absolute(value);
-
-    for (const [unit, ms] of UNITS) {
-        if (elapsed >= ms || unit === "second") return relative.format(-Math.floor(elapsed / ms), unit);
+// empty fields would submit as ?api=&from=&to= -- drop them so the URL only
+// carries filters that are actually set. Purely cosmetic: the server treats an
+// empty value as absent either way
+filtersForm.addEventListener("formdata", (event) => {
+    for (const [name, value] of [...event.formData]) {
+        if (value === "") event.formData.delete(name);
     }
-}
+});
 
-// a full-width header row whenever the calendar day changes, which is the only
-// structure this table can gain without a schema change. Groups restart on each
-// page, which is what a paged view should do
-const dayRow = (value) => {
-    const row = document.createElement("tr");
+// the dropdown options come from the server so a newly added API product shows
+// up here without a page edit
+const fillApiOptions = (apis) => {
+    for (const api of apis) {
+        const option = document.createElement("option");
+        option.value = String(api.api_product_id);
+        option.textContent = api.api_name;
+        apiSelect.append(option);
+    }
+};
 
-    const heading = document.createElement("th");
-    heading.colSpan = 2;
-    heading.scope = "colgroup";
-    heading.className = "bg-body-tertiary small text-body-secondary";
-    heading.textContent = dayLabel(value);
+// after a reload the inputs start blank, so the active filters are copied back
+// out of the URL -- the form always shows what the table is filtered by
+const restoreFilters = () => {
+    apiSelect.value = params.get("api") ?? "";
+    fromInput.value = params.get("from") ?? "";
+    toInput.value = params.get("to") ?? "";
+};
 
-    row.append(heading);
-    return row;
-}
-
-// one row per call, built with createElement/textContent so api names are always
-// treated as text and never as HTML
+// one row per call, built with createElement/textContent so api names are
+// always treated as text and never as HTML
 const renderCalls = (calls) => {
     const fragment = document.createDocumentFragment();
-    let currentDay = null;
 
     for (const call of calls) {
-        // toDateString collapses an instant to its local calendar day, which is the
-        // same basis the group label is rendered on
-        const day = new Date(call.used_at).toDateString();
-        if (day !== currentDay) {
-            currentDay = day;
-            fragment.append(dayRow(call.used_at));
-        }
-
         const row = document.createElement("tr");
 
-        const when = document.createElement("td");
-        when.className = "text-nowrap";
-        // the relative text is the readable form, but datetime keeps the machine
-        // one and title puts the absolute time a hover away
-        const time = document.createElement("time");
-        time.dateTime = new Date(call.used_at).toISOString();
-        time.title = absolute(call.used_at);
-        time.textContent = timestamp(call.used_at);
-        when.append(time);
+        const whenCell = document.createElement("td");
+        whenCell.className = "text-nowrap";
+        whenCell.textContent = when(call.used_at);
 
-        const api = document.createElement("td");
-        // a badge gives the eye a fixed shape to scan down. Deliberately one neutral
-        // colour: a per-product palette needs a checked contrast set, not a guess
+        const apiCell = document.createElement("td");
         const badge = document.createElement("span");
         badge.className = "badge text-bg-secondary";
         badge.textContent = call.api_name;
-        api.append(badge);
+        apiCell.append(badge);
 
-        row.append(when, api);
+        row.append(whenCell, apiCell);
         fragment.append(row);
     }
 
-    // replaceChildren so a page swaps the rows rather than doubling them -- and it
-    // is what clears the skeleton rows the markup ships with
     logBody.replaceChildren(fragment);
-}
+};
 
-// both buttons are derived from state rather than blanket re-enabled, so page 1
-// cannot be left with a live Previous. .disabled on the <li> is what Bootstrap
-// styles; the property on the <button> is what actually blocks the click and
-// tells a screen reader
-const setPagerState = () => {
-    prevItem.classList.toggle("disabled", pageIndex === 0);
-    prevPage.disabled = pageIndex === 0;
-    nextItem.classList.toggle("disabled", !nextBefore);
-    nextPage.disabled = !nextBefore;
-}
+const pageItem = (content, { href = null, current = false, disabled = false } = {}) => {
+    const item = document.createElement("li");
+    item.className = "page-item";
+    if (current) item.classList.add("active");
+    if (disabled) item.classList.add("disabled");
 
-// moveFocus only on a pager click: the click replaces everything below the
-// button, so focus follows the rows into the scroll region rather than sitting
-// on a button whose surroundings silently changed. On first load there is no
-// focus to move, and taking it would be rude
-async function loadPage(moveFocus = false) {
-    prevPage.disabled = true;
-    nextPage.disabled = true;
+    // a disabled step gets a span: an anchor would need the tabindex="-1" +
+    // aria-disabled workaround to stop acting like a link
+    const link = document.createElement(href && !disabled ? "a" : "span");
+    link.className = "page-link";
+    link.textContent = content;
+    if (href && !disabled) link.href = href;
+    if (current) item.setAttribute("aria-current", "page");
 
+    item.append(link);
+    return item;
+};
+
+// up to 5 page numbers centred on the current page, clamped to the ends
+const windowPages = (page, pageCount) => {
+    const start = Math.max(1, Math.min(page - 2, pageCount - 4));
+    const end = Math.min(pageCount, start + 4);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+};
+
+const renderPager = (page, pageCount) => {
+    // a single page needs no pager at all
+    if (pageCount <= 1) {
+        pager.classList.add("d-none");
+        return;
+    }
+
+    const items = [
+        pageItem("Previous", { href: pageHref(page - 1), disabled: page === 1 }),
+        ...windowPages(page, pageCount).map((n) =>
+            pageItem(String(n), { href: pageHref(n), current: n === page })),
+        pageItem("Next", { href: pageHref(page + 1), disabled: page === pageCount }),
+    ];
+
+    pager.replaceChildren(...items);
+    pager.classList.remove("d-none");
+};
+
+async function loadPage() {
     try {
-        // `before` is a bigint id kept as a string the whole way -- turning it
-        // into a JS number could round it and start skipping rows
-        const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        const before = cursors[pageIndex];
-        if (before) query.set("before", before);
-
-        const data = await getJson(`/usage/log?${query}`);
+        // the log request forwards the URL's own query string; the two fetches
+        // are independent, so they run at the same time
+        const [apisData, logData] = await Promise.all([
+            getJson("/usage/apis"),
+            getJson(`/usage/log?${params}`),
+        ]);
 
         // a null means getJson saw a 401 and the browser is already navigating
         // to the login page -- there is nothing left to render
-        if (!data) return;
+        if (!apisData || !logData) return;
 
-        const { calls, next_before } = data.log;
-        nextBefore = next_before;
+        fillApiOptions(apisData.apis);
+        restoreFilters();
 
-        if (calls.length === 0 && pageIndex === 0) {
+        const { calls, total, page, page_count } = logData.log;
+
+        if (total === 0) {
             logTableWrap.classList.add("d-none");
-            pager.classList.add("d-none");
             noCalls.classList.remove("d-none");
+            pageStatus.textContent = "";
             return;
         }
 
-        // an empty page past the first should not happen on an append-only table,
-        // but if it does, keep the rows that are there rather than blanking the
-        // card -- setPagerState leaves Previous live to get back out of it
-        if (calls.length > 0) renderCalls(calls);
+        // a stale or hand-edited URL can point past the last page -- offer the
+        // way back rather than showing an empty table
+        if (page > page_count) {
+            logTableWrap.classList.add("d-none");
+            pageStatus.replaceChildren("This page is out of range. ");
+            const back = document.createElement("a");
+            back.href = pageHref(1);
+            back.textContent = "Go to page 1";
+            pageStatus.append(back);
+            return;
+        }
 
+        renderCalls(calls);
         pageStatus.textContent =
-            `Page ${pageIndex + 1} · ${formatCount(calls.length)} call${calls.length === 1 ? "" : "s"}`;
-
-        // a single page of results needs no pager at all
-        pager.classList.toggle("d-none", pageIndex === 0 && !nextBefore);
-
-        if (moveFocus) logTableWrap.focus();
+            `Page ${page} of ${page_count} · ${total.toLocaleString()} call${total === 1 ? "" : "s"}`;
+        renderPager(page, page_count);
     } catch (e) {
         console.error(e);
-        // clear the skeletons -- a shimmer that never resolves reads as a hang
         logTableWrap.classList.add("d-none");
-        pager.classList.add("d-none");
         showFormError("Could not load your call log. Please refresh.");
-    } finally {
-        setPagerState();
     }
 }
-
-prevPage.addEventListener("click", () => {
-    if (pageIndex === 0) return;
-
-    showFormError(null);
-    pageIndex -= 1;
-    // the cursor for this page is already on the stack, so going back is a plain
-    // re-fetch: no reverse sort, nothing asked of the server
-    loadPage(true);
-});
-
-nextPage.addEventListener("click", () => {
-    if (!nextBefore) return;
-
-    showFormError(null);
-    cursors[pageIndex + 1] = nextBefore;
-    pageIndex += 1;
-    loadPage(true);
-});
 
 loadPage();

@@ -21,20 +21,3 @@
    depends on state that only exists at runtime. */
 .auth-in  [data-auth="out"] { display: none !important; }
 .auth-out [data-auth="in"]  { display: none !important; }
-
-/* ---- call log scroll box -------------------------------------------------
-   A height-capped scroll box with a pinned header, for the paged call log on
-   /usage. Bootstrap has neither half: .table-responsive is overflow-x only,
-   and .sticky-top is a viewport-level utility whose z-index (1020) is far
-   more than a table header inside a card needs.
-
-   The two rules are one change, not two. Sticky positions against the
-   nearest scroll container, which .table-responsive already makes this
-   element -- the reason a sticky header does nothing today is that the
-   container has no height, so it never scrolls. The max-height is what
-   makes sticky engage at all.
-
-   At .table-sm density a full page of rows fits inside 60vh on a typical
-   laptop, so the scrollbar shows up only on shorter viewports. */
-.log-scroll { max-height: 60vh; overflow-y: auto; }
-.log-scroll thead th { position: sticky; top: 0; z-index: 1; }

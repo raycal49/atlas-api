@@ -66,56 +66,57 @@
                 <section class="card shadow-sm">
                     <div class="card-body">
 
-                        <!-- table-responsive keeps a wide table scrolling inside its own
-                             box instead of pushing the page sideways on a phone. log-scroll
-                             adds the vertical half: it caps the height so a page of rows
-                             scrolls in here rather than growing the document.
+                        <!-- A plain GET form: submitting navigates to /usage?api=&from=&to=,
+                             and usage.js reads those values back out of the URL. The form
+                             deliberately has no page field, so changing filters always lands
+                             on page 1. Clear is just a link back to the unfiltered page. -->
+                        <form method="GET" action="/usage" class="row g-2 align-items-end mb-3" id="filters">
+                            <div class="col-sm-4">
+                                <label for="api" class="form-label small mb-1">API</label>
+                                <select class="form-select form-select-sm" id="api" name="api">
+                                    <option value="">All APIs</option>
+                                    <!-- options filled in by usage.js from /usage/apis -->
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <label for="from" class="form-label small mb-1">From</label>
+                                <input type="date" class="form-control form-control-sm" id="from" name="from">
+                            </div>
+                            <div class="col-sm-3">
+                                <label for="to" class="form-label small mb-1">To</label>
+                                <input type="date" class="form-control form-control-sm" id="to" name="to">
+                            </div>
+                            <div class="col-sm-2 d-flex gap-2">
+                                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                                <a href="/usage" class="btn btn-sm btn-outline-secondary">Clear</a>
+                            </div>
+                        </form>
 
-                             A scrollable box has to be reachable by keyboard, hence
-                             tabindex/role/aria-label -- it is the region usage.js moves focus
-                             to after a page change. -->
-                        <div class="table-responsive log-scroll placeholder-glow" id="logTableWrap"
-                             tabindex="0" role="region" aria-label="Call log">
+                        <!-- table-responsive keeps a wide table scrolling inside its own
+                             box instead of pushing the page sideways on a phone -->
+                        <div class="table-responsive" id="logTableWrap">
                             <table class="table table-sm table-hover align-middle mb-0">
                                 <caption class="visually-hidden">Your API calls, newest first</caption>
-                                <!-- the background sits on each th, not on thead: Bootstrap paints
-                                     per-cell backgrounds, so a bare thead loses and the body rows
-                                     would scroll through the sticky header instead of behind it -->
                                 <thead>
                                     <tr>
-                                        <th scope="col" class="bg-body-tertiary">When</th>
-                                        <th scope="col" class="bg-body-tertiary">API</th>
+                                        <th scope="col">When</th>
+                                        <th scope="col">API</th>
                                     </tr>
                                 </thead>
-                                <!-- skeleton rows so the table has height before data lands.
-                                     usage.js renders with replaceChildren, which clears these
-                                     on the first real page -->
-                                <tbody id="logBody">
-                                    <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-4"></span></td></tr>
-                                    <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-5"></span></td></tr>
-                                    <tr><td><span class="placeholder col-6"></span></td><td><span class="placeholder col-3"></span></td></tr>
-                                </tbody>
+                                <tbody id="logBody"></tbody>
                             </table>
                         </div>
 
                         <p id="noCalls" class="text-body-secondary mb-0 d-none">
-                            No calls recorded yet.
+                            No calls match.
                         </p>
 
-                        <!-- the pager lives outside the scroll box, so it stays put while the
-                             rows scroll. Buttons rather than anchors: this pager is driven by
-                             JavaScript, so it gets real disabled semantics instead of the
-                             tabindex="-1" + aria-disabled workaround anchors need. -->
+                        <!-- "Page 2 of 14 · 340 calls" -->
                         <div class="d-flex align-items-center gap-3 mt-3">
-                            <nav aria-label="Call log pages" id="pager" class="d-none">
-                                <ul class="pagination pagination-sm justify-content-end mb-0">
-                                    <li class="page-item" id="prevItem">
-                                        <button type="button" class="page-link" id="prevPage">Previous</button>
-                                    </li>
-                                    <li class="page-item" id="nextItem">
-                                        <button type="button" class="page-link" id="nextPage">Next</button>
-                                    </li>
-                                </ul>
+                            <!-- Bootstrap's pagination component; usage.js fills the list with
+                                 plain links, so each page is just a URL and Back works -->
+                            <nav aria-label="Call log pages">
+                                <ul class="pagination pagination-sm mb-0 d-none" id="pager"></ul>
                             </nav>
                             <span class="small text-body-secondary" id="pageStatus" aria-live="polite"></span>
                         </div>
