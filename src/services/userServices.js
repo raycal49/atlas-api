@@ -1,5 +1,10 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
 
+// how deep the call log pager may go: past this, the answer is "narrow with
+// filters", not more scrolling. 50 pages of 25 rows keeps the 1,250 most
+// recent calls browsable
+const MAX_PAGES = 50;
+
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const plan = await userRepo.findActivePlanByName(planName);
@@ -55,12 +60,18 @@ export const createUserServices = (userRepo) => ({
     const { calls, total } = await userRepo.findUsageLogPage(
       userId, { api, from, to }, limit, offset);
 
+    // at least 1, so an empty log still reads "Page 1 of 1"
+    const fullPageCount = Math.max(1, Math.ceil(total / limit));
+    const page_count = Math.min(fullPageCount, MAX_PAGES);
+
     return {
-      calls,
+      // a page past the cap serves no rows -- the cap is enforced, not cosmetic
+      calls: page > page_count ? [] : calls,
       total,
       page,
-      // at least 1, so an empty log still reads "Page 1 of 1"
-      page_count: Math.max(1, Math.ceil(total / limit)),
+      page_count,
+      // true when the cap is what ended the pager, so the client can say why
+      capped: fullPageCount > MAX_PAGES,
     };
   },
 

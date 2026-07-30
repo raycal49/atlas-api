@@ -207,6 +207,32 @@ describe('User Service', async () => {
 
             expect(result.total).toBe(101);
             expect(result.page_count).toBe(5);
+            expect(result.capped).toBe(false);
+        })
+
+        // 17,870 rows would be 715 pages -- the pager stops at 50, but the real
+        // total still goes out so the count next to the pager stays honest
+        it('caps the page count at fifty and says the log was truncated', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLogPage.mockResolvedValue({ calls: CALLS, total: 17870 });
+
+            const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 1, limit: 25 });
+
+            expect(result.page_count).toBe(50);
+            expect(result.total).toBe(17870);
+            expect(result.capped).toBe(true);
+        })
+
+        // the cap is enforced, not cosmetic: rows past it never leave the server
+        it('serves no rows for a page past the cap', async () => {
+            const { service, userRepo } = setup();
+            userRepo.findUsageLogPage.mockResolvedValue({ calls: CALLS, total: 17870 });
+
+            const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 60, limit: 25 });
+
+            expect(result.calls).toStrictEqual([]);
+            expect(result.page_count).toBe(50);
+            expect(result.total).toBe(17870);
         })
 
         // an empty log must not report zero pages -- the page still shows "Page 1 of 1"

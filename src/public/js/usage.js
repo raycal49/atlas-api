@@ -137,7 +137,7 @@ async function loadPage() {
         fillApiOptions(apisData.apis);
         restoreFilters();
 
-        const { calls, total, page, page_count } = logData.log;
+        const { calls, total, page, page_count, capped } = logData.log;
 
         if (total === 0) {
             logTableWrap.classList.add("d-none");
@@ -161,6 +161,13 @@ async function loadPage() {
         renderCalls(calls);
         pageStatus.textContent =
             `Page ${page} of ${page_count} · ${total.toLocaleString()} call${total === 1 ? "" : "s"}`;
+        // the server stops the pager at a cap; say so, or the log looks shorter
+        // than the call count next to it. page_count is the cap here, so the
+        // text can never quote a different number than the server enforced
+        if (capped) {
+            pageStatus.textContent +=
+                ` — showing the most recent ${page_count} pages; narrow with filters to see older calls`;
+        }
         renderPager(page, page_count);
     } catch (e) {
         console.error(e);
