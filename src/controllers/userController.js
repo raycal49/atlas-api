@@ -12,44 +12,18 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ dashboardData });
   },
 
-  getMonthlyApiCalls: async (req, res) => {
-    const usage = await userServices.getApiCallsForPeriod(req.tokenInfo.id);
-
-    // null when unsubscribed, same as getMySubscription -- the dashboard shows
-    // the "pick a plan" prompt instead of a usage breakdown
-    return res.status(200).json({ usage });
-  },
-
-  getTotalApiCalls: async (req, res) => {
-    // validateQuery parsed and defaulted these; req.query itself is untouched
-    const { before, limit } = req.validatedQuery;
-
-    const log = await userServices.getAllAPICalls(req.tokenInfo.id, before, limit);
+  getUsageLogPage: async (req, res) => {
+    // validateQuery parsed and defaulted the whole query; passing it through
+    // untouched means a future filter reaches the service without edits here
+    const log = await userServices.getUsageLogPage(req.tokenInfo.id, req.validatedQuery);
 
     return res.status(200).json({ log });
   },
 
-  getMyPayments: async (req, res) => {
-    const history = await userServices.getPaymentHistory(req.tokenInfo.id);
+  getApiProducts: async (req, res) => {
+    const apis = await userServices.getApiProducts();
 
-    return res.status(200).json({ history });
-  },
-
-  getMyUsage: async (req, res) => {
-    const usage = await userServices.getUsageSummary(req.tokenInfo.id);
-
-    // null when unsubscribed, same as getMySubscription -- the dashboard shows
-    // the "pick a plan" prompt instead of a usage breakdown
-    return res.status(200).json({ usage });
-  },
-
-  getMyUsageLog: async (req, res) => {
-    // validateQuery parsed and defaulted these; req.query itself is untouched
-    const { before, limit } = req.validatedQuery;
-
-    const log = await userServices.getUsageLog(req.tokenInfo.id, before, limit);
-
-    return res.status(200).json({ log });
+    return res.status(200).json({ apis });
   },
 
   getMyPayments: async (req, res) => {
