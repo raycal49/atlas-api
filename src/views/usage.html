@@ -111,8 +111,11 @@
                             No calls match.
                         </p>
 
-                        <!-- "Page 2 of 14 · 340 calls" -->
-                        <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+                        <!-- pager centered on its own line, "Page 2 of 14 · 340 calls"
+                             centered under it -- side by side they fill the card width
+                             whenever the truncation notice shows, and centering a full
+                             row is invisible -->
+                        <div class="d-flex flex-column align-items-center text-center gap-2 mt-3">
                             <!-- Bootstrap's pagination component; usage.js fills the list with
                                  plain links, so each page is just a URL and Back works -->
                             <nav aria-label="Call log pages">
