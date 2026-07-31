@@ -18,7 +18,6 @@
    briefly wrong while a fetch resolves.
 
    Bootstrap has no equivalent: .d-none is a fixed decision, and this one
-   depends on state that only exists at runtime. Hence the only handwritten
-   rules in this file. */
+   depends on state that only exists at runtime. */
 .auth-in  [data-auth="out"] { display: none !important; }
 .auth-out [data-auth="in"]  { display: none !important; }

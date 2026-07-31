@@ -99,39 +99,48 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  // which APIs a plan grants, and how many calls each one allows.
-  // a product with no row here is not part of the plan at all
-  findPlanApiLimits: async (planId) => {
-    return await sql`
-      SELECT ap.api_product_id,
-             ap.api_name,
-             l.monthly_limit::int AS monthly_limit
-      FROM plan_api_limits l
-      JOIN api_products ap ON ap.api_product_id = l.api_product_id
-      WHERE l.plan_id = ${planId}
-      ORDER BY ap.api_name`;
+  // one page of the call log plus the total matching count, filtered.
+  //
+  // offset pagination: the client asks for a page number, the service turns it
+  // into "skip offset rows, return limit rows". a COUNT with the same filters
+  // gives the total, which is what lets the page show "Page 2 of 14".
+  //
+  // the WHERE clause is built once as a fragment and embedded in both queries,
+  // so the rows and the count can never disagree about the filters. an absent
+  // filter contributes an empty fragment; a future filter column is one more
+  // line in this list. nested fragments are parameterized like everything else
+  findUsageLogPage: async (userId, { api, from, to }, limit, offset) => {
+    const filters = sql`
+      u.user_id = ${userId}
+      ${api ? sql`AND u.api_product_id = ${api}` : sql``}
+      ${from ? sql`AND u.used_at >= ${from}::date` : sql``}
+      ${to ? sql`AND u.used_at < ${to}::date + 1` : sql``}`;
+
+    const [calls, [{ total }]] = await Promise.all([
+      sql`
+        SELECT u.api_usage_id,
+               u.used_at,
+               ap.api_name
+        FROM api_usage u
+        JOIN api_products ap ON ap.api_product_id = u.api_product_id
+        WHERE ${filters}
+        ORDER BY u.used_at DESC, u.api_usage_id DESC
+        LIMIT ${limit} OFFSET ${offset}`,
+      sql`
+        SELECT COUNT(*)::int AS total
+        FROM api_usage u
+        WHERE ${filters}`,
+    ]);
+
+    return { calls, total };
   },
 
-  // one page of individual calls, newest first.
-  //
-  // keyset pagination, not OFFSET: api_usage_id only ever increases, so "the next
-  // page is the rows below this id" is an index seek no matter how deep you go,
-  // where OFFSET 10000 makes postgres walk and discard ten thousand rows first.
-  // it also can't skip or repeat a row when new calls arrive mid-paging.
-  //
-  // the IS NULL branch handles the first page, so there is one query rather than
-  // two nearly identical ones
-  findTotalApiCalls: async (userId, before, limit) => {
+  // every API product, for the call log's filter dropdown
+  findAllApiProducts: async () => {
     return await sql`
-      SELECT u.api_usage_id,
-             u.used_at,
-             ap.api_name
-      FROM api_usage u
-      JOIN api_products ap ON ap.api_product_id = u.api_product_id
-      WHERE u.user_id = ${userId}
-        AND (${before}::bigint IS NULL OR u.api_usage_id < ${before}::bigint)
-      ORDER BY u.api_usage_id DESC
-      LIMIT ${limit}`;
+      SELECT api_product_id, api_name
+      FROM api_products
+      ORDER BY api_name`;
   },
 
   getPeriodApiCalls: async (userId, periodStart, planId) => {
@@ -151,21 +160,6 @@ export const createUserRepository = (sql) => ({
     JOIN api_products ap ON ap.api_product_id = l.api_product_id
     WHERE l.plan_id = ${planId}
     ORDER BY ap.api_name`
-  },
-
-  // calls made in the current cycle, per API. products the user never called
-  // are simply absent from the result -- the service fills those in as 0.
-  // ::int because COUNT() and monthly_limit are int8, which postgres.js hands
-  // back as strings to protect precision
-  countUsageByProduct: async (userId, periodStart) => {
-    return await sql`
-      SELECT api_product_id,
-             COUNT(*)::int AS calls_used
-      FROM api_usage
-      WHERE user_id = ${userId}
-        AND used_at >= ${periodStart}::date
-        AND used_at <  ${periodStart}::date + interval '1 month'
-      GROUP BY api_product_id`;
   },
 
   subscribeToPlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
