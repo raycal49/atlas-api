@@ -45,12 +45,21 @@ const fillApiOptions = (apis) => {
     }
 };
 
+const syncDateBounds = () => {
+    toInput.min = fromInput.value;
+    fromInput.max = toInput.value;
+};
+
+fromInput.addEventListener("input", syncDateBounds);
+toInput.addEventListener("input", syncDateBounds);
+
 // after a reload the inputs start blank, so the active filters are copied back
 // out of the URL -- the form always shows what the table is filtered by
 const restoreFilters = () => {
     apiSelect.value = params.get("api") ?? "";
     fromInput.value = params.get("from") ?? "";
     toInput.value = params.get("to") ?? "";
+    syncDateBounds();
 };
 
 // one row per call, built with createElement/textContent so api names are
