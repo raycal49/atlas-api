@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Raymond Calderon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/stylesheets/style.css">
     <!-- Stamps the auth state on <html> from the signed_in cookie BEFORE the body
          paints, so the navbar is correct on the first frame rather than briefly
          wrong. Must stay a plain blocking script: defer or type="module" would
          both run after the body renders and reintroduce the flash. -->
+         
     <script>
         document.documentElement.classList.add(
             /(^|;\s*)signed_in=1(;|$)/.test(document.cookie) ? "auth-in" : "auth-out"
@@ -32,7 +34,11 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navLinks">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="/index.html">
+                            Home
+                            </a>
+                        </li>
                         <li class="nav-item"><a class="nav-link" href="/plans.html">Plans</a></li>
 
                         <li class="nav-item" data-auth="in"><a class="nav-link" href="/dashboard">Dashboard</a></li>
@@ -51,51 +57,217 @@
         </nav>
     </header>
 
-    <!-- main is the container itself; wrapping it in another div would just add
-         a level of nesting for nothing -->
-    <main class="container flex-grow-1 py-5 text-center">
-        <h1 class="display-5 fw-bold">Geospatial APIs, priced simply</h1>
-        <p class="lead text-body-secondary">
-            Geocoding, routing and maps behind one key. Pick a plan, watch your usage, no surprises.
-        </p>
-        <div class="mt-4">
-            <a href="/login.html" class="btn btn-primary btn-lg me-2">Login</a>
-            <a href="/register.html" class="btn btn-outline-secondary btn-lg">Register</a>
+<main class="container flex-grow-1 py-5">
+    <!-- Hero -->
+    <section class="row flex-lg-row-reverse align-items-center g-5 py-4 py-lg-5">
+        <div class="col-12 col-lg-6">
+            <div class="card position-relative overflow-hidden border-secondary-subtle shadow-lg">
+                <img
+                    src="/images/dotted-world-map.svg"
+                    class="img-fluid"
+                    alt=""
+                    aria-hidden="true"
+                    width="900"
+                    height="500"
+                    fetchpriority="high"
+                >
+
+                <!-- Decorative API response -->
+                <div
+                    class="card position-absolute bottom-0 start-0 m-3 bg-body-tertiary shadow"
+                    style="width: min(18rem, calc(100% - 2rem));"
+                >
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <code class="text-info">GET /geocode</code>
+                            <span class="badge text-bg-success">200 OK</span>
+                        </div>
+
+                        <hr class="my-2">
+
+                        <code class="small text-body-secondary">
+                            { "lat": 30.2672,<br>
+                            &nbsp; "lon": -97.7431 }
+                        </code>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center mt-5 text-start">
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h2 class="card-title h5">Geocoding</h2>
-                        <p class="card-text text-body-secondary mb-0">
-                            Turn addresses into coordinates and back again.
-                        </p>
-                    </div>
-                </div>
+        <div class="col-lg-6 text-center text-lg-start">
+            <div class="d-inline-flex align-items-center gap-2 text-primary mb-3">
+                <i class="bi bi-globe-americas" aria-hidden="true"></i>
+                <span class="fw-semibold">Location infrastructure for developers</span>
             </div>
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h2 class="card-title h5">Directions</h2>
-                        <p class="card-text text-body-secondary mb-0">
-                            Routing and travel times between any two points.
-                        </p>
-                    </div>
-                </div>
+
+            <h1 class="display-4 fw-bold lh-1 mb-3">
+                Geospatial APIs, priced simply
+            </h1>
+
+            <p class="lead text-body-secondary mb-4">
+                Geocoding, routing and maps behind one key.
+                Choose a plan, track every request and avoid surprise bills.
+            </p>
+
+            <!-- Signed-out call to action -->
+            <div
+                class="d-grid gap-2 d-sm-flex justify-content-sm-center justify-content-lg-start"
+                data-auth="out"
+            >
+                <a href="/register.html" class="btn btn-primary btn-lg px-4">
+                    Create free account
+                </a>
+
+                <a href="/plans.html" class="btn btn-outline-secondary btn-lg px-4">
+                    View plans
+                </a>
             </div>
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h2 class="card-title h5">Static Maps</h2>
-                        <p class="card-text text-body-secondary mb-0">
-                            Rendered map images you can drop straight into a page.
-                        </p>
-                    </div>
-                </div>
+
+            <!-- Signed-in call to action -->
+            <div
+                class="d-grid gap-2 d-sm-flex justify-content-sm-center justify-content-lg-start"
+                data-auth="in"
+            >
+                <a href="/dashboard" class="btn btn-primary btn-lg px-4">
+                    Open dashboard
+                </a>
+
+                <a href="/usage" class="btn btn-outline-secondary btn-lg px-4">
+                    View call log
+                </a>
+            </div>
+
+            <p class="small text-body-secondary mt-3 mb-0">
+                A full-stack JavaScript learning project with simulated services and billing.
+            </p>
+        </div>
+    </section>
+
+    <!-- Small product summary -->
+    <section class="border-top border-bottom py-4 my-4" aria-label="Product summary">
+        <div class="row text-center gy-4">
+            <div class="col-4">
+                <div class="h3 fw-bold mb-1">6</div>
+                <div class="small text-body-secondary">API products</div>
+            </div>
+
+            <div class="col-4 border-start border-end">
+                <div class="h3 fw-bold mb-1">3</div>
+                <div class="small text-body-secondary">Simple plans</div>
+            </div>
+
+            <div class="col-4">
+                <div class="h3 fw-bold mb-1">1</div>
+                <div class="small text-body-secondary">Usage dashboard</div>
             </div>
         </div>
-    </main>
+    </section>
+
+    <!-- Products -->
+    <section class="py-5" aria-labelledby="products-heading">
+        <div class="text-center mx-auto mb-5" style="max-width: 42rem;">
+            <h2 id="products-heading" class="fw-bold">
+                Everything behind one API key
+            </h2>
+
+            <p class="text-body-secondary mb-0">
+                Six location services with straightforward usage tracking.
+            </p>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-geo-alt fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Geocoding</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Convert street addresses into latitude and longitude coordinates.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-pin-map fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Reverse Geocoding</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Turn coordinates back into readable street addresses.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-signpost-split fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Directions</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Calculate routes and travel times between locations.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-grid-3x3-gap fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Distance Matrix</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Compare travel distances and times across multiple points.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-bullseye fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Isochrones</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Visualize the areas reachable within a given time or distance.
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col">
+                <article class="card h-100 border-0 shadow-sm bg-body-tertiary">
+                    <div class="card-body p-4">
+                        <div class="d-inline-flex rounded-3 bg-primary-subtle text-primary p-3 mb-3">
+                            <i class="bi bi-map fs-4" aria-hidden="true"></i>
+                        </div>
+
+                        <h3 class="card-title h5">Static Maps</h3>
+                        <p class="card-text text-body-secondary mb-0">
+                            Produce ready-to-embed map images for websites and reports.
+                        </p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</main>
 
     <footer class="bg-body-tertiary border-top py-3">
         <div class="container text-center text-body-secondary small">
