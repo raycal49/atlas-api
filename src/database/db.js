@@ -1,17 +1,51 @@
 // import postgres from 'postgres';
 
-// console.log('DB URL is:', process.env.DATABASE_URL);
-
-// const sql = postgres(process.env.DATABASE_URL, {
-//   ssl: { rejectUnauthorized: false },
-// });
-
-// export { sql };
-
+// export const createDb = (connectionString = process.env.DATABASE_URL) => {
+//   return postgres(connectionString, {
+//     ssl: { rejectUnauthorized: false },
+//   });
+// };
 import postgres from 'postgres';
 
-export const createDb = (connectionString = process.env.DATABASE_URL) => {
+const getDebugOption = () => {
+  if (process.env.DATABASE_LOG_QUERIES !== 'true') {
+    return false;
+  }
+
+  return (_connection, query, parameters, _parameterTypes) => {
+    console.log('\n--- PostgreSQL query ---');
+    console.log(query);
+    console.log('Parameters:', parameters);
+    console.log('------------------------\n');
+  };
+};
+
+const getSslOption = () => {
+  const sslMode = process.env.DATABASE_SSL_MODE;
+
+  switch (sslMode) {
+    case 'require':
+      return 'require';
+
+    case 'disable':
+      return false;
+
+    default:
+      throw new Error(
+        'DATABASE_SSL_MODE must be either "require" or "disable"',
+      );
+  }
+};
+
+export const createDb = (
+  connectionString = process.env.DATABASE_URL,
+) => {
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is required');
+  }
+
   return postgres(connectionString, {
-    ssl: { rejectUnauthorized: false },
+    ssl: getSslOption(),
+    debug: getDebugOption(),
   });
 };
