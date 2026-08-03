@@ -8,7 +8,17 @@
     "dev": "node --watch --env-file-if-exists=.env ./src/www.js",
     "seed:usage": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js",
     "assets:map": "node ./src/scripts/generateHeroMap.js",
-    "test": "vitest"
+
+    "test": "vitest --config vitest.unit.config.js",
+    "test:run": "vitest run --config vitest.unit.config.js",
+    "test:integration": "node --env-file=.env.integration ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.js",
+
+    "db:integration:up": "docker compose -f compose.integration.yml up --wait",
+    "db:integration:ps": "docker compose -f compose.integration.yml ps",
+    "db:integration:logs": "docker compose -f compose.integration.yml logs db",
+    "db:integration:shell": "docker compose -f compose.integration.yml exec db psql -U postgres -d geoapp_test",
+    "db:integration:down": "docker compose -f compose.integration.yml down",
+    "db:integration:destroy": "docker compose -f compose.integration.yml down -v"
   },
   "dependencies": {
     "argon2": "^0.44.0",
