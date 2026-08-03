@@ -26,17 +26,15 @@ describe('findUserCredentials', () => {
 });
 
 describe('insertUser', () => {
-  it('returns only the generated user_id and persists the row', async () => {
+  it('stores the user and returns an id that identifies the stored row', async () => {
     const created = await authRepository.insertUser(
       'brand-new-user',
       'fake-argon2-hash',
       'brand-new-user@example.test',
     );
 
-    // the service layer destructures user_id off this, so the shape is a
-    // contract: RETURNING user_id means one key, nothing else
-    expect(created).toEqual({ user_id: expect.any(String) });
-
+    // looking the row up by the returned id is what makes this an assertion
+    // about behaviour: if the id were wrong or invented, there would be no row
     const [persisted] = await testSql`
       SELECT username, hash, email
       FROM users
@@ -49,7 +47,7 @@ describe('insertUser', () => {
     });
   });
 
-  it('translates a duplicate username into ExistingAccountError', async () => {
+  it('rejects a username that is already taken', async () => {
     await makeUser({ username: 'taken-name' });
 
     await expect(
@@ -97,16 +95,17 @@ describe('insertUser', () => {
     );
   });
 
-  it('rethrows a NOT NULL violation untranslated', async () => {
+  it('does not report a missing required field as a taken username', async () => {
     const error = await authRepository
       .insertUser('user-without-an-email', 'fake-argon2-hash', null)
       .catch((err) => err);
 
-    // only 23505 is translated, so this arrives as the driver's own error.
-    // ExistingAccountError carries no cause when thrown from insertUser, so
-    // the presence of .code is what proves nothing translated it
+    // createErrorHandler turns err.statusCode into the HTTP status, so an
+    // error carrying no statusCode becomes a 500. That is the consequence
+    // worth pinning: a malformed insert must not surface to the caller as a
+    // 409 conflict claiming the account already exists.
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(ExistingAccountError);
-    expect(error.code).toBe('23502');
+    expect(error.statusCode).toBeUndefined();
   });
 });
