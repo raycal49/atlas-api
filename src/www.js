@@ -1,14 +1,15 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
-
 import createDebug from 'debug';
 import http from 'node:http';
-import app from './app.js';
+
+import { createDb } from './database/db.js';
+import { createContainer } from './container.js';
+import { createApp } from './app.js';
 
 const debug = createDebug('bankco:server');
+
+const sql = createDb();
+const container = createContainer({ sql });
+const app = createApp(container);
 
 /**
  * Get port from environment and store in Express.
@@ -30,6 +31,38 @@ const server = http.createServer(app);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+/**
+ * Close the server and the container's resources on shutdown.
+ */
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+let shuttingDown = false;
+
+async function shutdown(signal) {
+  if (shuttingDown) return; // a second Ctrl-C shouldn't re-enter this
+  shuttingDown = true;
+
+  debug(`${signal} received, closing server`);
+
+  // stop accepting connections, then drain the database pool
+  server.close(async (err) => {
+    if (err) {
+      console.error(err);
+      process.exit(1);
+    }
+
+    try {
+      await container.close();
+      process.exit(0);
+    } catch (closeErr) {
+      console.error(closeErr);
+      process.exit(1);
+    }
+  });
+}
 
 /**
  * Normalize a port into a number, string, or false.
