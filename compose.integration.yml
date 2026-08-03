@@ -1,0 +1,26 @@
+name: geoapp-integration
+
+services:
+  db:
+    image: postgres:17
+
+    environment:
+      POSTGRES_DB: geoapp_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: geoapp_test
+
+    ports:
+      - "127.0.0.1:55432:5432"
+
+    volumes:
+      - geoapp_test_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d geoapp_test"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  geoapp_test_data:
