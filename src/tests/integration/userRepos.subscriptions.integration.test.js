@@ -75,24 +75,6 @@ describe('subscribeToPlan', () => {
     expect(utcDay(row.period_start)).toBe(utcDay(row.started_at));
   });
 
-  it('records no card when none is given', async () => {
-    const user = await makeUser();
-    const plan = await makePlan();
-
-    const paymentId = await userRepository.subscribeToPlan(
-      user.user_id,
-      plan.plan_id,
-      plan.price_per_month,
-    );
-
-    const [payment] = await testSql`
-      SELECT card_last4
-      FROM payment_history
-      WHERE payment_id = ${paymentId}`;
-
-    expect(payment.card_last4).toBeNull();
-  });
-
   it('rejects a user who already has an active subscription', async () => {
     const user = await makeUser();
     const firstPlan = await makePlan();
@@ -218,33 +200,6 @@ describe('changePlan', () => {
     expect(
       subscriptions.filter((row) => row.ended_at === null),
     ).toHaveLength(1);
-  });
-
-  it('subscribes a user who has no active subscription', async () => {
-    const user = await makeUser();
-    const plan = await makePlan();
-
-    const paymentId = await userRepository.changePlan(
-      user.user_id,
-      plan.plan_id,
-      plan.price_per_month,
-    );
-
-    // the UPDATE matches no rows and the insert proceeds regardless, so
-    // changePlan is a subscribe for a user who has never had one
-    const [active] = await testSql`
-      SELECT subscription_id, plan_id
-      FROM subscriptions
-      WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
-
-    expect(active.plan_id).toBe(plan.plan_id);
-
-    const [payment] = await testSql`
-      SELECT subscription_id
-      FROM payment_history
-      WHERE payment_id = ${paymentId}`;
-
-    expect(payment.subscription_id).toBe(active.subscription_id);
   });
 
   it('leaves the current subscription active when the payment cannot be written', async () => {

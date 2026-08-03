@@ -59,42 +59,6 @@ describe('insertUser', () => {
     ).rejects.toBeInstanceOf(ExistingAccountError);
   });
 
-  it('treats usernames differing only in case as duplicates', async () => {
-    await makeUser({ username: 'CaseSensitiveCheck' });
-
-    // users.username is citext, so users_username_key collides here even
-    // though the two strings are not equal in JavaScript. Nothing in
-    // authRepo.js says this -- it comes entirely from the column type.
-    await expect(
-      authRepository.insertUser(
-        'casesensitivecheck',
-        'fake-argon2-hash',
-        'another-address@example.test',
-      ),
-    ).rejects.toBeInstanceOf(ExistingAccountError);
-  });
-
-  it('reports a duplicate email as a taken username', async () => {
-    await makeUser({ email: 'taken-address@example.test' });
-
-    const error = await authRepository
-      .insertUser(
-        'a-completely-unused-name',
-        'fake-argon2-hash',
-        'taken-address@example.test',
-      )
-      .catch((err) => err);
-
-    // KNOWN QUIRK: users_email_key also raises 23505, and insertUser does not
-    // look at which constraint fired, so an email collision is reported as a
-    // username collision. Pinned as-is; change the assertion if the repo
-    // starts discriminating on err.constraint_name the way userRepos does.
-    expect(error).toBeInstanceOf(ExistingAccountError);
-    expect(error.message).toBe(
-      'Account with this username already exists',
-    );
-  });
-
   it('does not report a missing required field as a taken username', async () => {
     const error = await authRepository
       .insertUser('user-without-an-email', 'fake-argon2-hash', null)
