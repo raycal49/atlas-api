@@ -5,6 +5,7 @@ import {
 } from 'vitest';
 
 import { createAuthRepository } from '../../repositories/authRepo.js';
+import { makeUser } from './fixtures.js';
 import { testSql } from './testDb.js';
 
 describe('auth repository integration', () => {
@@ -29,6 +30,18 @@ describe('auth repository integration', () => {
     expect(retrievedUser).toEqual({
       user_id: createdUser.user_id,
       hash,
+    });
+  });
+
+  it('finds the credentials of a user created by the fixture', async () => {
+    const user = await makeUser();
+
+    const credentials =
+      await authRepository.findUserCredentials(user.username);
+
+    expect(credentials).toEqual({
+      user_id: user.user_id,
+      hash: user.hash,
     });
   });
 });
