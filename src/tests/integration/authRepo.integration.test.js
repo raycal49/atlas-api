@@ -4,31 +4,56 @@ import {
   it,
 } from 'vitest';
 
+import { ExistingAccountError } from '../../errors/authErrors.js';
 import { createAuthRepository } from '../../repositories/authRepo.js';
+import { makeUser } from './fixtures.js';
 import { testSql } from './testDb.js';
 
-describe('auth repository integration', () => {
-  const authRepository = createAuthRepository(testSql);
+const authRepository = createAuthRepository(testSql);
 
-  it('inserts a user and reads it back from PostgreSQL', async () => {
-    const username = 'integration-test-user';
-    const hash = 'fake-hash-for-database-testing';
-    const email = 'integration-test@example.com';
+describe('findUserCredentials', () => {
+  it('returns the user_id and hash for an existing username', async () => {
+    const user = await makeUser();
 
-    const createdUser = await authRepository.insertUser(
-      username,
-      hash,
-      email,
+    const credentials =
+      await authRepository.findUserCredentials(user.username);
+
+    expect(credentials).toEqual({
+      user_id: user.user_id,
+      hash: user.hash,
+    });
+  });
+});
+
+describe('insertUser', () => {
+  it('stores the user and returns an id that identifies the stored row', async () => {
+    const created = await authRepository.insertUser(
+      'brand-new-user',
+      'fake-argon2-hash',
+      'brand-new-user@example.test',
     );
 
-    expect(createdUser.user_id).toBeDefined();
+    const [persisted] = await testSql`
+      SELECT username, hash, email
+      FROM users
+      WHERE user_id = ${created.user_id}`;
 
-    const retrievedUser =
-      await authRepository.findUserCredentials(username);
-
-    expect(retrievedUser).toEqual({
-      user_id: createdUser.user_id,
-      hash,
+    expect(persisted).toEqual({
+      username: 'brand-new-user',
+      hash: 'fake-argon2-hash',
+      email: 'brand-new-user@example.test',
     });
+  });
+
+  it('rejects a username that is already taken', async () => {
+    await makeUser({ username: 'taken-name' });
+
+    await expect(
+      authRepository.insertUser(
+        'taken-name',
+        'fake-argon2-hash',
+        'a-different-address@example.test',
+      ),
+    ).rejects.toBeInstanceOf(ExistingAccountError);
   });
 });
