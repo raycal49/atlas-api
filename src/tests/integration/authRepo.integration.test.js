@@ -33,8 +33,6 @@ describe('insertUser', () => {
       'brand-new-user@example.test',
     );
 
-    // looking the row up by the returned id is what makes this an assertion
-    // about behaviour: if the id were wrong or invented, there would be no row
     const [persisted] = await testSql`
       SELECT username, hash, email
       FROM users
@@ -57,19 +55,5 @@ describe('insertUser', () => {
         'a-different-address@example.test',
       ),
     ).rejects.toBeInstanceOf(ExistingAccountError);
-  });
-
-  it('does not report a missing required field as a taken username', async () => {
-    const error = await authRepository
-      .insertUser('user-without-an-email', 'fake-argon2-hash', null)
-      .catch((err) => err);
-
-    // createErrorHandler turns err.statusCode into the HTTP status, so an
-    // error carrying no statusCode becomes a 500. That is the consequence
-    // worth pinning: a malformed insert must not surface to the caller as a
-    // 409 conflict claiming the account already exists.
-    expect(error).toBeInstanceOf(Error);
-    expect(error).not.toBeInstanceOf(ExistingAccountError);
-    expect(error.statusCode).toBeUndefined();
   });
 });

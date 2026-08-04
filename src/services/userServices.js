@@ -60,16 +60,15 @@ export const createUserServices = (userRepo) => ({
     const { calls, total } = await userRepo.findUsageLogPage(
       userId, { api, from, to }, limit, offset);
 
-    // at least 1, so an empty log still reads "Page 1 of 1"
     const fullPageCount = Math.max(1, Math.ceil(total / limit));
-    const page_count = Math.min(fullPageCount, MAX_PAGES);
+    const pageCount = Math.min(fullPageCount, MAX_PAGES);
 
     return {
       // a page past the cap serves no rows -- the cap is enforced, not cosmetic
-      calls: page > page_count ? [] : calls,
+      calls: page > pageCount ? [] : calls,
       total,
       page,
-      page_count,
+      pageCount,
       // true when the cap is what ended the pager, so the client can say why
       capped: fullPageCount > MAX_PAGES,
     };

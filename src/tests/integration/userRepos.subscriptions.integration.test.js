@@ -1,15 +1,7 @@
-import {
-  describe,
-  expect,
-  it,
-} from 'vitest';
-
+import { describe, expect, it, } from 'vitest';
 import { AlreadySubscribedError } from '../../errors/userErrors.js';
 import { createUserRepository } from '../../repositories/userRepos.js';
-import {
-  makePlan,
-  makeUser,
-} from './fixtures.js';
+import { makePlan, makeUser, } from './fixtures.js';
 import { testSql } from './testDb.js';
 
 const userRepository = createUserRepository(testSql);
