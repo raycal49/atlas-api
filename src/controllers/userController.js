@@ -12,7 +12,7 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ dashboardData });
   },
 
-  getUsageLogPage: async (req, res) => {
+  getUsagePage: async (req, res) => {
     // validateQuery parsed and defaulted the whole query; passing it through
     // untouched means a future filter reaches the service without edits here
     const log = await userServices.getUsageLogPage(req.tokenInfo.id, req.validatedQuery);

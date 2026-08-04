@@ -47,7 +47,10 @@ export const resetTestDatabase = async () => {
       public.payment_history,
       public.subscriptions,
       public.api_usage,
-      public.users
+      public.plan_api_limits,
+      public.users,
+      public.plans,
+      public.api_products
     RESTART IDENTITY
     CASCADE
   `;

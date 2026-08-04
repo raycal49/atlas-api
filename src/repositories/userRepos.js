@@ -56,9 +56,6 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  // the billing cycle the user is currently inside: the most recent payment's
-  // period_start, and the same date a month later (when the next bill lands
-  // and the usage quotas reset)
   findCurrentPeriod: async (subscriptionId) => {
     const rows = await sql`
       SELECT period_start,
@@ -70,12 +67,6 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  // every payment the user has ever made, newest first. the join runs through
-  // ALL of their subscriptions, not just the active one -- after a plan change
-  // older payments hang off the previous subscription_id, and dropping them
-  // would silently shorten their billing history.
-  // plans is a LEFT JOIN because subscriptions.plan_id is nullable: a payment
-  // should still appear even if its plan can't be named
   findPaymentHistory: async (userId) => {
     return await sql`
       SELECT ph.payment_id,
@@ -99,16 +90,6 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  // one page of the call log plus the total matching count, filtered.
-  //
-  // offset pagination: the client asks for a page number, the service turns it
-  // into "skip offset rows, return limit rows". a COUNT with the same filters
-  // gives the total, which is what lets the page show "Page 2 of 14".
-  //
-  // the WHERE clause is built once as a fragment and embedded in both queries,
-  // so the rows and the count can never disagree about the filters. an absent
-  // filter contributes an empty fragment; a future filter column is one more
-  // line in this list. nested fragments are parameterized like everything else
   findUsageLogPage: async (userId, { api, from, to }, limit, offset) => {
     const filters = sql`
       u.user_id = ${userId}
@@ -116,26 +97,25 @@ export const createUserRepository = (sql) => ({
       ${from ? sql`AND u.used_at >= ${from}::date` : sql``}
       ${to ? sql`AND u.used_at < ${to}::date + 1` : sql``}`;
 
-    const [calls, [{ total }]] = await Promise.all([
-      sql`
-        SELECT u.api_usage_id,
-               u.used_at,
-               ap.api_name
-        FROM api_usage u
-        JOIN api_products ap ON ap.api_product_id = u.api_product_id
-        WHERE ${filters}
-        ORDER BY u.used_at DESC, u.api_usage_id DESC
-        LIMIT ${limit} OFFSET ${offset}`,
-      sql`
-        SELECT COUNT(*)::int AS total
-        FROM api_usage u
-        WHERE ${filters}`,
-    ]);
+    const callsQuery = sql`
+      SELECT u.api_usage_id, u.used_at, ap.api_name 
+      FROM api_usage u JOIN api_products ap ON ap.api_product_id = u.api_product_id
+      WHERE ${filters}
+      ORDER BY u.used_at DESC, u.api_usage_id DESC
+      LIMIT ${limit} OFFSET ${offset}`;
+
+    const countQuery = sql`
+      SELECT COUNT(*)::int AS total
+      FROM api_usage u
+      WHERE ${filters}`;
+
+    const [calls, countRows] = await Promise.all([callsQuery, countQuery]);
+
+    const total = countRows[0].total;
 
     return { calls, total };
   },
 
-  // every API product, for the call log's filter dropdown
   findAllApiProducts: async () => {
     return await sql`
       SELECT api_product_id, api_name
