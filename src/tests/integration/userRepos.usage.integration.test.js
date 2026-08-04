@@ -8,6 +8,8 @@ import { createUserRepository } from '../../repositories/userRepos.js';
 import {
   DEFAULT_USED_AT,
   makeApiProduct,
+  makePlan,
+  makePlanLimit,
   makeUsage,
   makeUser,
 } from './fixtures.js';
@@ -274,5 +276,109 @@ describe('findUsageLogPage', () => {
       middle.api_usage_id,
       oldest.api_usage_id,
     ]);
+  });
+});
+
+// getPeriodApiCalls reaches products through a plan's limits rather than
+// through usage, so every test below needs a plan with something metered on it
+const makeMeteredPlan = async (apiProductIds, monthlyLimit = 1000) => {
+  const plan = await makePlan();
+
+  for (const apiProductId of apiProductIds) {
+    await makePlanLimit({
+      plan_id: plan.plan_id,
+      api_product_id: apiProductId,
+      monthly_limit: monthlyLimit,
+    });
+  }
+
+  return plan;
+};
+
+// the period the tests below meter against. DEFAULT_USED_AT sits inside it, so
+// a call seeded without an explicit timestamp counts.
+const PERIOD_START = '2026-03-01';
+
+describe('getPeriodApiCalls', () => {
+  it('returns a row for a metered product the user has never called', async () => {
+    const caller = await makeCaller();
+    const untouched = await makeApiProduct();
+    const plan = await makeMeteredPlan([
+      caller.apiProductId,
+      untouched.api_product_id,
+    ]);
+
+    await callAt(caller);
+
+    const rows = await userRepository.getPeriodApiCalls(
+      caller.userId,
+      PERIOD_START,
+      plan.plan_id,
+    );
+
+    // the correlated subquery is what makes this hold. A JOIN onto api_usage
+    // with a GROUP BY would drop the product that has no matching rows, and the
+    // dashboard would show nothing at all instead of "0 of 1000"
+    expect(rows).toHaveLength(2);
+
+    const untouchedRow = rows.find(
+      (row) => row.api_product_id === untouched.api_product_id,
+    );
+
+    expect(untouchedRow.calls_used).toBe(0);
+  });
+
+  it('counts a call made at the first instant of the period', async () => {
+    const caller = await makeCaller();
+    const plan = await makeMeteredPlan([caller.apiProductId]);
+
+    await callAt(caller, '2026-03-01T00:00:00Z');
+
+    // used_at >= periodStart::date, so the opening instant is inside
+    const [row] = await userRepository.getPeriodApiCalls(
+      caller.userId,
+      PERIOD_START,
+      plan.plan_id,
+    );
+
+    expect(row.calls_used).toBe(1);
+  });
+
+  it('does not count a call made one month after the period opened', async () => {
+    const caller = await makeCaller();
+    const plan = await makeMeteredPlan([caller.apiProductId]);
+
+    await callAt(caller, '2026-04-01T00:00:00Z');
+
+    // used_at < periodStart::date + interval '1 month', so the instant the next
+    // period opens belongs to that period and not this one
+    const [row] = await userRepository.getPeriodApiCalls(
+      caller.userId,
+      PERIOD_START,
+      plan.plan_id,
+    );
+
+    expect(row.calls_used).toBe(0);
+  });
+
+  it('reports the limit and the count as numbers', async () => {
+    const caller = await makeCaller();
+    const plan = await makeMeteredPlan([caller.apiProductId], 2500);
+
+    await callAt(caller);
+    await callAt(caller);
+
+    const [row] = await userRepository.getPeriodApiCalls(
+      caller.userId,
+      PERIOD_START,
+      plan.plan_id,
+    );
+
+    // toBe is Object.is, so these fail against strings. monthly_limit is a
+    // bigint and count() returns bigint; without the ::int casts both would
+    // arrive as strings and the dashboard's arithmetic would concatenate
+    // instead of adding
+    expect(row.calls_used).toBe(2);
+    expect(row.monthly_limit).toBe(2500);
   });
 });
