@@ -68,7 +68,9 @@ export const createUserServices = (userRepo) => ({
       calls: page > pageCount ? [] : calls,
       total,
       page,
-      pageCount,
+      // camelCase locally, snake_case on the wire: the calls[] rows carry
+      // PostgreSQL's own column names, so the payload stays in one casing
+      page_count: pageCount,
       // true when the cap is what ended the pager, so the client can say why
       capped: fullPageCount > MAX_PAGES,
     };

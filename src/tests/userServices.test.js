@@ -206,7 +206,7 @@ describe('User Service', async () => {
             const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 1, limit: 25 });
 
             expect(result.total).toBe(101);
-            expect(result.pageCount).toBe(5);
+            expect(result.page_count).toBe(5);
             expect(result.capped).toBe(false);
         })
 
@@ -218,7 +218,7 @@ describe('User Service', async () => {
 
             const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 1, limit: 25 });
 
-            expect(result.pageCount).toBe(50);
+            expect(result.page_count).toBe(50);
             expect(result.total).toBe(17870);
             expect(result.capped).toBe(true);
         })
@@ -231,7 +231,7 @@ describe('User Service', async () => {
             const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 60, limit: 25 });
 
             expect(result.calls).toStrictEqual([]);
-            expect(result.pageCount).toBe(50);
+            expect(result.page_count).toBe(50);
             expect(result.total).toBe(17870);
         })
 
@@ -243,7 +243,7 @@ describe('User Service', async () => {
             const result = await service.getUsageLogPage('79c7d0bd4b6a', { page: 1, limit: 25 });
 
             expect(result.calls).toStrictEqual([]);
-            expect(result.pageCount).toBe(1);
+            expect(result.page_count).toBe(1);
         })
 
         it('hands the rows back exactly as the repository returned them', async () => {
