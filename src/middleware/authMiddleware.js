@@ -1,8 +1,7 @@
 import { jwtVerify } from 'jose';
 import { JWTExpired } from 'jose/errors';
 import { InvalidTokenError, ExpiredTokenError, MissingTokenError } from '../errors/authErrors.js';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { jwtSecret } from '../config/jwt.js';
 
 export const createAuthMiddleware = () => {
   return async (req, res, next) => {
@@ -14,7 +13,7 @@ export const createAuthMiddleware = () => {
         throw new MissingTokenError();
 
     try {
-      const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+      const { payload } = await jwtVerify(token, jwtSecret, { algorithms: ['HS256'] });
       req.tokenInfo = payload;
     } catch (err) {
       if (err instanceof JWTExpired)

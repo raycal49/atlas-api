@@ -1,6 +1,7 @@
 import argon2 from "argon2";
 import { SignJWT, jwtVerify } from 'jose';
 import { InvalidCredentialError, ExistingAccountError } from '../errors/authErrors.js'
+import { jwtSecret } from '../config/jwt.js'
 
 const ARGON2_OPTIONS = {
   type: argon2.argon2id,
@@ -22,12 +23,11 @@ const createClaims = (id) => {
 }
 
 const createToken = async (claims) => {
-  const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     return await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h')
-      .sign(secret)
+      .sign(jwtSecret)
 };
 
 const issueToken = async (id) => {
