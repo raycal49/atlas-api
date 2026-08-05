@@ -15,11 +15,37 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js 22
+    - name: Use Node.js 26
       uses: actions/setup-node@v4
       with:
-        node-version: 22
+        node-version: 26
         cache: 'npm'
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: Start test database
+        run: npm run db:integration:up
+      - name: Write integration env file
+        run: |
+          cat > .env.integration <<'EOF'
+          NODE_ENV=test
+          DATABASE_URL=postgres://postgres:geoapp_test@127.0.0.1:55432/geoapp_test
+          DATABASE_SSL_MODE=disable
+          EOF
+      - run: npm run test:integration
+      - name: Database logs on failure
+        if: failure()
+        run: npm run db:integration:logs
+      - name: Tear down
+        if: always()
+        run: npm run db:integration:destroy
