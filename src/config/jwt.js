@@ -1,7 +1,7 @@
-const rawSecret = process.env.JWT_SECRET;
+export const createJwtSecret = (rawSecret = process.env.JWT_SECRET) => {
+  if (!rawSecret) {
+    throw new Error('JWT_SECRET is required');
+  }
 
-if (!rawSecret) {
-  throw new Error('JWT_SECRET is required');
-}
-
-export const jwtSecret = new TextEncoder().encode(rawSecret);
+  return new TextEncoder().encode(rawSecret);
+};

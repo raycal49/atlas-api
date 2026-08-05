@@ -1,7 +1,6 @@
 import argon2 from "argon2";
 import { SignJWT, jwtVerify } from 'jose';
 import { InvalidCredentialError, ExistingAccountError } from '../errors/authErrors.js'
-import { jwtSecret } from '../config/jwt.js'
 
 const ARGON2_OPTIONS = {
   type: argon2.argon2id,
@@ -22,23 +21,24 @@ const createClaims = (id) => {
   return {"id":id};
 }
 
-const createToken = async (claims) => {
+export const createAuthServices = (authRepository, jwtSecret) => {
+  const createToken = async (claims) => {
     return await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h')
       .sign(jwtSecret)
-};
+  };
 
-const issueToken = async (id) => {
-  const claims = createClaims(id);
+  const issueToken = async (id) => {
+    const claims = createClaims(id);
 
-  const token = await createToken(claims);
+    const token = await createToken(claims);
 
-  return token;
-}
+    return token;
+  }
 
-export const createAuthServices = (authRepository) => ({
+  return {
     authenticateUser: async (name, password) => {
         const userCredentials = await authRepository.findUserCredentials(name) ?? null;
         
@@ -76,6 +76,7 @@ export const createAuthServices = (authRepository) => ({
         const signedToken = await issueToken(user_id);
 
         return signedToken;
-    },    
-});
+    },
+  };
+};
 

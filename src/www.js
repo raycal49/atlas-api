@@ -2,13 +2,15 @@ import createDebug from 'debug';
 import http from 'node:http';
 
 import { createDb } from './database/db.js';
+import { createJwtSecret } from './config/jwt.js';
 import { createContainer } from './container.js';
 import { createApp } from './app.js';
 
 const debug = createDebug('bankco:server');
 
 const sql = createDb();
-const container = createContainer({ sql });
+const jwtSecret = createJwtSecret();
+const container = createContainer({ sql, jwtSecret });
 const app = createApp(container);
 
 /**

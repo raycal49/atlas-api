@@ -1,9 +1,8 @@
 import { jwtVerify } from 'jose';
 import { JWTExpired } from 'jose/errors';
 import { InvalidTokenError, ExpiredTokenError, MissingTokenError } from '../errors/authErrors.js';
-import { jwtSecret } from '../config/jwt.js';
 
-export const createAuthMiddleware = () => {
+export const createAuthMiddleware = (jwtSecret) => {
   return async (req, res, next) => {
     const token = req.cookies?.token;
 
