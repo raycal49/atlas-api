@@ -35,13 +35,10 @@ jobs:
       - run: npm ci
       - name: Start test database
         run: npm run db:integration:up
+      # Copied rather than written inline so CI and a developer's machine read
+      # the same committed file and cannot drift apart. Nothing in it is secret.
       - name: Write integration env file
-        run: |
-          cat > .env.integration <<'EOF'
-          NODE_ENV=test
-          DATABASE_URL=postgres://postgres:geoapp_test@127.0.0.1:55432/geoapp_test
-          DATABASE_SSL_MODE=disable
-          EOF
+        run: cp .env.integration.example .env.integration
       - run: npm run test:integration
       - name: Database logs on failure
         if: failure()
