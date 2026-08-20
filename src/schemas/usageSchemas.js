@@ -23,7 +23,7 @@ export const usageLogQuerySchema = z
       .default(25), // matches PAGE_SIZE in public/js/usage.js
 
     // ---- filters: a future filter column is one more blankable() line ----
-    api: blankable(z.coerce.number().int().positive('API must be a valid id')), // api_product_id
+    api: blankable(z.uuid('API must be a valid id')), // api_product_id
 
     // YYYY-MM-DD, exactly what <input type="date"> submits
     from: blankable(z.iso.date('From must be a date (YYYY-MM-DD)')),

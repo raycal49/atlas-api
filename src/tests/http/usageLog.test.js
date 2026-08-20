@@ -6,6 +6,8 @@ import {buildApp, tokenCookie, TEST_USER_ID,} from './testApp.js';
 const LIMIT = {
   DEFAULT: 25,
   REQUESTED: 10,
+  MAX: 100,
+  ABOVE_MAX: 999,
 };
 
 const OFFSET = {
@@ -105,6 +107,14 @@ describe('GET /usage/log', () => {
       .get('/usage/log?limit=999')
       .set('Cookie', await tokenCookie())
       .expect(400);
+
+      expect(response.body).toEqual({
+        status: 'fail',
+        message: 'Validation failed',
+        errors: {
+          limit: [`Limit must be at most ${LIMIT.MAX}`],
+        },
+      });
   });
 
   it('caps the pager at fifty pages', async () => {
