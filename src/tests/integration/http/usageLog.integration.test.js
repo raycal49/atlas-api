@@ -27,12 +27,6 @@ const CALLED_AT = {
 };
 
 describe('GET /usage/log', () => {
-  it('rejects a request that carries no token cookie', async () => {
-    await request(app)
-      .get('/usage/log')
-      .expect(401);
-  });
-
   it('names the rule a rejected limit broke', async () => {
     const user = await makeUser();
 

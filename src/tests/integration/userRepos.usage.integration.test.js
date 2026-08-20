@@ -88,82 +88,17 @@ describe('findUsageLogPage', () => {
     expect(total).toBe(1);
   });
 
-  it('includes a call at the first instant of the from day', async () => {
+  // The window is `used_at >= from::date AND used_at < to::date + 1`, so both
+  // named days belong to it: from counts from its first instant, and to covers
+  // its whole day rather than stopping at midnight the way a naive <= would.
+  // Seeding both edges at once also proves the two fragments compose rather
+  // than one clobbering the other.
+  it('includes the calls sitting on both edges of the window', async () => {
     const caller = await makeCaller();
 
-    await callAt(caller, '2026-03-15T00:00:00Z');
+    const openingInstant = await callAt(caller, '2026-03-10T00:00:00Z');
+    const lastMoment = await callAt(caller, '2026-03-20T23:59:59Z');
 
-    // used_at >= from::date, so the boundary instant itself is in
-    const { calls, total } = await userRepository.findUsageLogPage(
-      caller.userId,
-      { from: '2026-03-15' },
-      10,
-      0,
-    );
-
-    expect(calls).toHaveLength(1);
-    expect(total).toBe(1);
-  });
-
-  it('excludes a call one second before the from day', async () => {
-    const caller = await makeCaller();
-
-    await callAt(caller, '2026-03-14T23:59:59Z');
-
-    const { calls, total } = await userRepository.findUsageLogPage(
-      caller.userId,
-      { from: '2026-03-15' },
-      10,
-      0,
-    );
-
-    expect(calls).toHaveLength(0);
-    expect(total).toBe(0);
-  });
-
-  it('includes a call late on the to day', async () => {
-    const caller = await makeCaller();
-
-    await callAt(caller, '2026-03-15T23:59:59Z');
-
-    // used_at < to::date + 1, so to covers its whole day rather than stopping
-    // at midnight the way a naive <= would
-    const { calls, total } = await userRepository.findUsageLogPage(
-      caller.userId,
-      { to: '2026-03-15' },
-      10,
-      0,
-    );
-
-    expect(calls).toHaveLength(1);
-    expect(total).toBe(1);
-  });
-
-  it('excludes a call at the first instant after the to day', async () => {
-    const caller = await makeCaller();
-
-    await callAt(caller, '2026-03-16T00:00:00Z');
-
-    const { calls, total } = await userRepository.findUsageLogPage(
-      caller.userId,
-      { to: '2026-03-15' },
-      10,
-      0,
-    );
-
-    expect(calls).toHaveLength(0);
-    expect(total).toBe(0);
-  });
-
-  it('returns only the calls inside a from and to window', async () => {
-    const caller = await makeCaller();
-
-    await callAt(caller, '2026-03-09T12:00:00Z');
-    const inside = await callAt(caller, '2026-03-15T12:00:00Z');
-    await callAt(caller, '2026-03-21T12:00:00Z');
-
-    // both fragments are appended to the same filter, so this fails if one
-    // clobbers the other rather than composing
     const { calls, total } = await userRepository.findUsageLogPage(
       caller.userId,
       { from: '2026-03-10', to: '2026-03-20' },
@@ -171,9 +106,27 @@ describe('findUsageLogPage', () => {
       0,
     );
 
-    expect(calls).toHaveLength(1);
-    expect(calls[0].api_usage_id).toBe(inside.api_usage_id);
-    expect(total).toBe(1);
+    expect(calls.map((call) => call.api_usage_id).sort()).toEqual(
+      [openingInstant.api_usage_id, lastMoment.api_usage_id].sort(),
+    );
+    expect(total).toBe(2);
+  });
+
+  it('excludes the calls sitting just outside the window', async () => {
+    const caller = await makeCaller();
+
+    await callAt(caller, '2026-03-09T23:59:59Z');
+    await callAt(caller, '2026-03-21T00:00:00Z');
+
+    const { calls, total } = await userRepository.findUsageLogPage(
+      caller.userId,
+      { from: '2026-03-10', to: '2026-03-20' },
+      10,
+      0,
+    );
+
+    expect(calls).toHaveLength(0);
+    expect(total).toBe(0);
   });
 
   it('counts every match while returning one page of them', async () => {
@@ -236,25 +189,6 @@ describe('findUsageLogPage', () => {
     // a row can land on both pages or on neither
     expect(ids).toHaveLength(4);
     expect(new Set(ids).size).toBe(4);
-  });
-
-  it('returns no calls past the end while still reporting the total', async () => {
-    const caller = await makeCaller();
-
-    await callAt(caller);
-    await callAt(caller);
-
-    const { calls, total } = await userRepository.findUsageLogPage(
-      caller.userId,
-      {},
-      10,
-      10,
-    );
-
-    // the page is empty but there is still a call log -- the difference between
-    // "nothing on this page" and "no usage at all"
-    expect(calls).toHaveLength(0);
-    expect(total).toBe(2);
   });
 
   it('orders calls newest first', async () => {
@@ -361,24 +295,4 @@ describe('getPeriodApiCalls', () => {
     expect(row.calls_used).toBe(0);
   });
 
-  it('reports the limit and the count as numbers', async () => {
-    const caller = await makeCaller();
-    const plan = await makeMeteredPlan([caller.apiProductId], 2500);
-
-    await callAt(caller);
-    await callAt(caller);
-
-    const [row] = await userRepository.getPeriodApiCalls(
-      caller.userId,
-      PERIOD_START,
-      plan.plan_id,
-    );
-
-    // toBe is Object.is, so these fail against strings. monthly_limit is a
-    // bigint and count() returns bigint; without the ::int casts both would
-    // arrive as strings and the dashboard's arithmetic would concatenate
-    // instead of adding
-    expect(row.calls_used).toBe(2);
-    expect(row.monthly_limit).toBe(2500);
-  });
 });

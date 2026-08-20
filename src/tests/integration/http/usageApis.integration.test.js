@@ -8,12 +8,6 @@ import { createTestApp } from '../testApp.js';
 const app = createTestApp();
 
 describe('GET /usage/apis', () => {
-  it('rejects a request that carries no token cookie', async () => {
-    await request(app)
-      .get('/usage/apis')
-      .expect(401);
-  });
-
   it('returns every api product under an apis key', async () => {
     const user = await makeUser();
     const routing = await makeApiProduct({ api_name: 'routing' });

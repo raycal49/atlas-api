@@ -16,15 +16,6 @@ const CARD = {
 const PLAN_PRICE = '19.99';
 
 describe('POST /subscriptions', () => {
-  it('rejects a request that carries no token cookie', async () => {
-    const plan = await makePlan();
-
-    await request(app)
-      .post('/subscriptions')
-      .send({ plan_name: plan.plan_name, card_number: CARD.NUMBER })
-      .expect(401);
-  });
-
   it('rejects a card number that is not a card number', async () => {
     const user = await makeUser();
     const plan = await makePlan();

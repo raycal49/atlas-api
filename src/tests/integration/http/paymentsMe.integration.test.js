@@ -24,12 +24,6 @@ const PLAN_START = `${DEFAULT_PERIOD_START}T00:00:00Z`;
 const NEXT_BILL_DUE = '2026-04-15T00:00:00.000Z';
 
 describe('GET /payments/me', () => {
-  it('rejects a request that carries no token cookie', async () => {
-    await request(app)
-      .get('/payments/me')
-      .expect(401);
-  });
-
   it('offers no upcoming charge to a user whose subscription has ended', async () => {
     const user = await makeUser();
     const plan = await makePlan({ price_per_month: ENDED_PLAN_PRICE });

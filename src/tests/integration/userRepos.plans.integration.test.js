@@ -21,26 +21,18 @@ describe('findActivePlanByName', () => {
     expect(found.price_per_month).toBe('14.99');
   });
 
-  it('does not return a plan that has been retired', async () => {
+  // Two ways to miss, one assertion each. The retired case is the only real
+  // branch in the query: drop the `AND is_active = true` conjunct and retired
+  // plans become purchasable again, still returning a row, so nothing anywhere
+  // would error. The unknown-name case seeds a decoy so the query is looking at
+  // a populated table -- against an empty one it would pass even if the WHERE
+  // clause matched nothing at all. selectPlan branches on this to raise
+  // InvalidPlanError; rows[0] on an empty result is undefined, not null.
+  it('returns undefined for a retired plan and for a name no plan carries', async () => {
     await makePlan({ plan_name: 'retired', is_active: false });
-
-    const found = await userRepository.findActivePlanByName('retired');
-
-    // the AND is_active = true conjunct is the only real branch here. Drop it
-    // and retired plans become purchasable again -- a query that still returns
-    // a row, so nothing anywhere would error
-    expect(found).toBeUndefined();
-  });
-
-  it('returns undefined for a name no plan carries', async () => {
-    // a decoy, so the query is looking at a populated table. Against an empty
-    // one this test would pass even if the WHERE clause matched nothing at all
     await makePlan({ plan_name: 'launch' });
 
-    const found = await userRepository.findActivePlanByName('no-such-plan');
-
-    // selectPlan branches on this to raise InvalidPlanError. rows[0] on an
-    // empty result is undefined rather than null
-    expect(found).toBeUndefined();
+    expect(await userRepository.findActivePlanByName('retired')).toBeUndefined();
+    expect(await userRepository.findActivePlanByName('no-such-plan')).toBeUndefined();
   });
 });

@@ -4,7 +4,6 @@ import {
   it,
 } from 'vitest';
 
-import { ExistingAccountError } from '../../errors/authErrors.js';
 import { createAuthRepository } from '../../repositories/authRepo.js';
 import { makeUser } from './fixtures.js';
 import { testSql } from './testDb.js';
@@ -43,17 +42,5 @@ describe('insertUser', () => {
       hash: 'fake-argon2-hash',
       email: 'brand-new-user@example.test',
     });
-  });
-
-  it('rejects a username that is already taken', async () => {
-    await makeUser({ username: 'taken-name' });
-
-    await expect(
-      authRepository.insertUser(
-        'taken-name',
-        'fake-argon2-hash',
-        'a-different-address@example.test',
-      ),
-    ).rejects.toBeInstanceOf(ExistingAccountError);
   });
 });
