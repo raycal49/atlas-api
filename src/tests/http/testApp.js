@@ -16,6 +16,9 @@ import { createUserRoutes } from '../../routes/userRouter.js';
 import { createAuthServices } from '../../services/authServices.js';
 import { createUserServices } from '../../services/userServices.js';
 
+const TEST_JWT_SECRET = 'http-test-secret';
+const testJwtKey = new TextEncoder().encode(TEST_JWT_SECRET);
+
 export const TEST_USER_ID = '8e1c4c22-0f7a-4a1e-9f0e-1b2c3d4e5f60';
 export const TEST_USERNAME = 'testuser';
 export const TEST_PASSWORD = 'Password123';
@@ -70,9 +73,9 @@ export const buildApp = () => {
   const authRepository = fakeAuthRepository();
   const userRepository = fakeUserRepository();
 
-  const authServices = createAuthServices(authRepository);
+  const authServices = createAuthServices(authRepository, testJwtKey);
   const userServices = createUserServices(userRepository);
-  const authMiddleware = createAuthMiddleware();
+  const authMiddleware = createAuthMiddleware(testJwtKey);
 
   const app = createApp({
     publicDir: path.join(import.meta.dirname, '../../public'),
@@ -154,7 +157,7 @@ export const signedInAgent = async (app) => {
 export const signToken = async (
   claims,
   {
-    secret = process.env.JWT_SECRET,
+    secret = TEST_JWT_SECRET,
     expSeconds,
   } = {},
 ) => {
