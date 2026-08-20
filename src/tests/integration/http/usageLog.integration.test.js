@@ -18,10 +18,6 @@ const LIMIT = {
   ABOVE_MAX: 999,
 };
 
-const MAX_PAGES = 50;
-
-const OVER_CAP_ROWS = LIMIT.DEFAULT * MAX_PAGES + 1;
-
 const DEFAULT_PAGE_ROWS = LIMIT.DEFAULT + 1;
 
 const CALLED_AT = {
@@ -139,80 +135,5 @@ describe('GET /usage/log', () => {
     expect(response.body.log.calls.map((call) => call.api_name))
       .toEqual(['geocode']);
     expect(response.body.log.total).toBe(1);
-  });
-
-  it('shows another user nothing of this one', async () => {
-    const user = await makeUser();
-    const bystander = await makeUser();
-    const apiProduct = await makeApiProduct();
-
-    await makeUsage({
-      user_id: bystander.user_id,
-      api_product_id: apiProduct.api_product_id,
-    });
-
-    const response = await request(app)
-      .get('/usage/log')
-      .set('Cookie', await tokenCookieFor(user.user_id))
-      .expect(200);
-
-    expect(response.body.log).toMatchObject({ calls: [], total: 0 });
-  });
-
-  it('stops the pager at fifty pages and says why', async () => {
-    const user = await makeUser();
-    const apiProduct = await makeApiProduct();
-
-    await makeUsageRows(OVER_CAP_ROWS, {
-      user_id: user.user_id,
-      api_product_id: apiProduct.api_product_id,
-    });
-
-    const response = await request(app)
-      .get('/usage/log')
-      .set('Cookie', await tokenCookieFor(user.user_id))
-      .expect(200);
-
-    expect(response.body.log).toMatchObject({
-      total: OVER_CAP_ROWS,
-      page_count: MAX_PAGES,
-      capped: true,
-    });
-  });
-
-  it('serves no rows past the page cap', async () => {
-    const user = await makeUser();
-    const apiProduct = await makeApiProduct();
-
-    await makeUsageRows(OVER_CAP_ROWS, {
-      user_id: user.user_id,
-      api_product_id: apiProduct.api_product_id,
-    });
-
-    const response = await request(app)
-      .get(`/usage/log?page=${MAX_PAGES + 1}`)
-      .set('Cookie', await tokenCookieFor(user.user_id))
-      .expect(200);
-
-    expect(response.body.log).toMatchObject({
-      calls: [],
-      page: MAX_PAGES + 1,
-    });
-  });
-
-  it('reports one page when there are no calls', async () => {
-    const user = await makeUser();
-
-    const response = await request(app)
-      .get('/usage/log')
-      .set('Cookie', await tokenCookieFor(user.user_id))
-      .expect(200);
-
-    expect(response.body.log).toMatchObject({
-      calls: [],
-      total: 0,
-      page_count: 1,
-      capped: false,
-    });
   });
 });

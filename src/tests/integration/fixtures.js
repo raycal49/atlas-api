@@ -159,14 +159,13 @@ export const makeUsage = async (overrides = {}) => {
   return usage;
 };
 
-// The pager cap only shows itself past 1,250 calls, and makeUsage would spend
-// 1,251 round trips getting there -- slow enough to matter against the 10s
-// test timeout. postgres.js turns an array of objects into one multi-row
-// INSERT, so the whole seed costs a single round trip.
+// Filling a whole page takes more rows than it is worth writing one INSERT at
+// a time. postgres.js turns an array of objects into a single multi-row
+// INSERT, so seeding a full page costs one round trip instead of twenty-six.
 //
-// Every row shares a used_at. The cap is arithmetic over the total, so the
-// ordering these rows tie on is beside the point -- and findUsageLogPage
-// breaks that tie on api_usage_id, which is covered in the repository tests.
+// Every row shares a used_at. Callers here care how many rows come back, not
+// what order they arrive in -- findUsageLogPage breaks that tie on
+// api_usage_id, which the repository tests cover.
 export const makeUsageRows = async (
   count,
   {
