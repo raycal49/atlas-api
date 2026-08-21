@@ -26,13 +26,7 @@ const PAYMENTS = [
     period_start: '2026-06-15', card_last4: null, plan_name: 'Free' },
 ];
 
-// The route is covered end to end in
-// integration/http/paymentsMe.integration.test.js. These two cases are about
-// where the upcoming charge gets its price, and the guard that suppresses it.
 describe('GET /payments/me', () => {
-  // Quoting the last payment instead would show the old price for a whole
-  // cycle after an upgrade -- note the most recent payment here is 49.00 while
-  // the plan they are on now is 199.00.
   it('prices the next charge from the current plan, not the last payment', async () => {
     const { service, userRepo } = setup();
 
@@ -50,8 +44,6 @@ describe('GET /payments/me', () => {
     });
   });
 
-  // A subscription with no payment yet has no period to bill from, so there is
-  // nothing honest to quote.
   it('has nothing upcoming when the subscription has no billing period yet', async () => {
     const { service, userRepo } = setup();
 

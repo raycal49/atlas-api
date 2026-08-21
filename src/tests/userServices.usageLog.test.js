@@ -4,12 +4,7 @@ import { setup, USER_ID } from './userServicesHarness.js';
 
 const LIMIT = 25;
 const MAX_PAGES = 50;
-
-// 17,870 rows would be 715 pages at the default limit -- comfortably past the
-// cap, so page_count stops at 50 while total keeps telling the truth.
 const OVER_CAP_TOTAL = 17870;
-
-// 101 rows is four full pages and one leftover row.
 const PARTIAL_LAST_PAGE_TOTAL = 101;
 
 const CALLS = [
@@ -17,10 +12,6 @@ const CALLS = [
   { api_usage_id: '499', used_at: '2026-07-19T09:00:00.000Z', api_name: 'Directions' },
 ];
 
-// The route is covered end to end in
-// integration/http/usageLog.integration.test.js. Everything here is arithmetic
-// over `total` -- no SQL is involved in the cap, so driving these through a
-// real database would only mean seeding rows to produce an integer.
 describe('GET /usage/log', () => {
   it('rounds the page count up so a partial last page still counts', async () => {
     const { service, userRepo } = setup();
@@ -52,8 +43,6 @@ describe('GET /usage/log', () => {
     expect(result.capped).toBe(true);
   });
 
-  // The cap is enforced, not cosmetic: rows past it never leave the server,
-  // even though the repository handed some over.
   it('serves no rows for a page past the cap', async () => {
     const { service, userRepo } = setup();
 
@@ -69,8 +58,6 @@ describe('GET /usage/log', () => {
     expect(result.total).toBe(OVER_CAP_TOTAL);
   });
 
-  // An empty log must not report zero pages -- the pager still shows
-  // "Page 1 of 1".
   it('reports one page even when the log is empty', async () => {
     const { service, userRepo } = setup();
 

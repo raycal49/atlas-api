@@ -7,6 +7,7 @@
     "start": "node --env-file-if-exists=.env ./src/www.js",
     "dev": "node --watch --env-file-if-exists=.env ./src/www.js",
     "seed:usage": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js",
+    "seed:usage:reset": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js --reset",
     "assets:map": "node ./src/scripts/generateHeroMap.js",
 
     "test": "vitest --config vitest.unit.config.js",

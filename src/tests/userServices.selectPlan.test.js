@@ -19,10 +19,6 @@ const CHANGED_SUBSCRIPTION = {
   started_at: '2012-02-12',
 };
 
-// The route itself is covered end to end in
-// integration/http/subscriptions.integration.test.js. What is left here are the
-// two branches selectPlan takes when the user already holds a subscription --
-// awkward to reach through HTTP, cheap to enumerate against a stub.
 describe('POST /subscriptions', () => {
   it('rejects a plan the user is already on', async () => {
     const { service, userRepo } = setup();

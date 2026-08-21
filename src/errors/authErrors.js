@@ -1,8 +1,8 @@
 export class InvalidCredentialError extends Error {
   constructor(options) {
-    super("Invalid username and/or password", options);        // sets message + handles cause
-    this.name = "InvalidCredential";  // otherwise it lies and says "Error"
-    this.statusCode = 401; // 401 - unauthorized
+    super("Invalid username and/or password", options);
+    this.name = "InvalidCredential";
+    this.statusCode = 401;
   }
 }
 
@@ -10,7 +10,7 @@ export class ExistingAccountError extends Error {
   constructor(options) {
     super("Account with this username already exists", options);
     this.name = "UsernameTaken";
-    this.statusCode = 409; // 409 - conflict i think
+    this.statusCode = 409;
   }
 }
 

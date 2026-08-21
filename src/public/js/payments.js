@@ -7,16 +7,11 @@ const paymentsTableWrap = document.querySelector("#paymentsTableWrap");
 const paymentsBody = document.querySelector("#paymentsBody");
 const noPayments = document.querySelector("#noPayments");
 
-// paid_at is a real instant, so the local clock is the right thing to show it in
 const instant = (value) => new Date(value).toLocaleDateString();
 
-// period_start and due_on are calendar dates -- rendering them in UTC stops them
-// slipping to the previous day for anyone west of UTC
 const calendarDay = (value) =>
     new Date(value).toLocaleDateString(undefined, { timeZone: "UTC" });
 
-// the card renders as a skeleton from the first frame, so this fills it in or
-// takes it away -- it never has to reveal it
 const renderUpcoming = (upcoming) => {
     if (!upcoming) {
         upcomingCard.classList.add("d-none");
@@ -31,8 +26,6 @@ const renderUpcoming = (upcoming) => {
     document.querySelector("#upcomingPlan").textContent = upcoming.plan_name ?? "";
 }
 
-// one row per payment, built with createElement/textContent so plan names are
-// always treated as text and never as HTML
 const renderPayments = (payments) => {
     if (payments.length === 0) {
         paymentsTableWrap.classList.add("d-none");
@@ -58,8 +51,6 @@ const renderPayments = (payments) => {
             row.append(td);
         }
 
-        // amounts are the one column that must line up down the page, which is
-        // exactly what tabular-nums is for
         const amount = document.createElement("td");
         amount.className = "text-end font-monospace";
         amount.textContent = formatMoney(payment.amount_paid);
@@ -68,8 +59,6 @@ const renderPayments = (payments) => {
         fragment.append(row);
     }
 
-    // replaceChildren so a re-render swaps the rows rather than doubling them --
-    // and it is what clears the skeleton rows the markup ships with
     paymentsBody.replaceChildren(fragment);
 }
 
@@ -77,15 +66,13 @@ async function loadPayments() {
     try {
         const data = await getJson("/payments/me");
 
-        // a null means getJson saw a 401 and the browser is already navigating
-        // to the login page -- there is nothing left to render
-        if (!data) return;
+        if (!data)
+            return;
 
         renderUpcoming(data.history.upcoming);
         renderPayments(data.history.payments);
     } catch (e) {
         console.error(e);
-        // clear the skeletons -- a shimmer that never resolves reads as a hang
         upcomingCard.classList.add("d-none");
         paymentsTableWrap.classList.add("d-none");
         showFormError("Could not load your billing history. Please refresh.");

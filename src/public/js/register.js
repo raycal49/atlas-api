@@ -4,9 +4,6 @@ import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
 const form = document.querySelector("#userinfo");
 const submitBtn = form.querySelector('button[type="submit"]');
 const confirmError = document.querySelector("#confirm_password-error");
-
-// the inputs the server can send per-field errors back for. confirm_password is
-// checked here in the browser only, so it is not in this list
 const FIELDS = ["username", "email", "password"];
 
 const passwordsMatch = () => {
@@ -23,10 +20,6 @@ async function registerUser() {
     try {
         const { ok, status, body } = await postForm("/auth/register", new FormData(form));
 
-        // check success FIRST. this used to fall through to the redirect on any
-        // response that wasn't a validation failure, so a taken username sent the
-        // browser to /dashboard, which bounced it to the login page with no
-        // explanation at all
         if (ok) {
             window.location.href = '/dashboard';
             return;
@@ -37,8 +30,6 @@ async function registerUser() {
             return;
         }
 
-        // a taken username or email arrives as a bare JSON string -- show the
-        // server's own wording
         if (status === 409) {
             showFormError(body);
             return;
@@ -60,5 +51,4 @@ form.addEventListener("submit", async (event) => {
     await registerUser();
 });
 
-// stale errors disappear as soon as the user starts fixing their input
 form.addEventListener("input", () => hideErrors(FIELDS));

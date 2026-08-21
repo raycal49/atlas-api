@@ -6,10 +6,7 @@
     <meta name="author" content="Raymond Calderon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/stylesheets/style.css">
-    <!-- Stamps the auth state on <html> from the signed_in cookie BEFORE the body
-         paints, so the navbar is correct on the first frame rather than briefly
-         wrong. Must stay a plain blocking script: defer or type="module" would
-         both run after the body renders and reintroduce the flash. -->
+
     <script>
         document.documentElement.classList.add(
             /(^|;\s*)signed_in=1(;|$)/.test(document.cookie) ? "auth-in" : "auth-out"
@@ -35,7 +32,6 @@
 
                         <li class="nav-item" data-auth="in"><a class="nav-link" href="/dashboard">Dashboard</a></li>
                         <li class="nav-item" data-auth="in">
-                            <!-- a plain form POST, so the navbar needs no JavaScript at all -->
                             <form method="POST" action="/auth/logout">
                                 <button type="submit" class="nav-link border-0 bg-transparent">Log out</button>
                             </form>
@@ -65,17 +61,11 @@
 
                 <section class="card shadow-sm">
                     <div class="card-body">
-
-                        <!-- A plain GET form: submitting navigates to /usage?api=&from=&to=,
-                             and usage.js reads those values back out of the URL. The form
-                             deliberately has no page field, so changing filters always lands
-                             on page 1. Clear is just a link back to the unfiltered page. -->
                         <form method="GET" action="/usage" class="row g-2 align-items-end mb-3" id="filters">
                             <div class="col-sm-4">
                                 <label for="api" class="form-label small mb-1">API</label>
                                 <select class="form-select form-select-sm" id="api" name="api">
                                     <option value="">All APIs</option>
-                                    <!-- options filled in by usage.js from /usage/apis -->
                                 </select>
                             </div>
                             <div class="col-sm-3">
@@ -92,8 +82,6 @@
                             </div>
                         </form>
 
-                        <!-- table-responsive keeps a wide table scrolling inside its own
-                             box instead of pushing the page sideways on a phone -->
                         <div class="table-responsive" id="logTableWrap">
                             <table class="table table-sm table-hover align-middle mb-0">
                                 <caption class="visually-hidden">Your API calls, newest first</caption>
@@ -111,20 +99,13 @@
                             No calls match.
                         </p>
 
-                        <!-- pager centered on its own line, "Page 2 of 14 · 340 calls"
-                             centered under it -- side by side they fill the card width
-                             whenever the truncation notice shows, and centering a full
-                             row is invisible -->
                         <div class="d-flex flex-column align-items-center text-center gap-2 mt-3">
-                            <!-- Bootstrap's pagination component; usage.js fills the list with
-                                 plain links, so each page is just a URL and Back works -->
                             <nav aria-label="Call log pages">
                                 <ul class="pagination pagination-sm mb-0 d-none" id="pager"></ul>
                             </nav>
                             <span class="small text-body-secondary" id="pageStatus" aria-live="polite"></span>
                         </div>
 
-                        <!-- form-level errors (server trouble) -- text is filled in by usage.js -->
                         <span class="invisible text-danger small d-block mt-3" id="form-error" aria-live="polite"></span>
                     </div>
                 </section>

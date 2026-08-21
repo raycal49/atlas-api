@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
-
 import { tokenCookieFor } from '../authFixtures.js';
 import {
   DEFAULT_PERIOD_START,

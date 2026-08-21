@@ -3,8 +3,6 @@ import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
 
 const form = document.querySelector("#userinfo");
 const submitBtn = form.querySelector('button[type="submit"]');
-
-// the inputs this form can get per-field errors back for
 const FIELDS = ["username", "password"];
 
 async function loginUser() {
@@ -24,7 +22,6 @@ async function loginUser() {
         }
 
         if (status === 401) {
-            // deliberately vague -- never say which of the two was wrong
             showFormError("Invalid username or password");
             return;
         }
@@ -44,5 +41,4 @@ form.addEventListener("submit", async (event) => {
     await loginUser();
 });
 
-// stale errors disappear as soon as the user starts fixing their input
 form.addEventListener("input", () => hideErrors(FIELDS));
