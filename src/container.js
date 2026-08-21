@@ -14,11 +14,11 @@ import { createAuthRoutes } from './routes/authRouter.js';
 import { createPageRoutes } from './routes/pageRouter.js';
 import { createErrorHandler } from './middleware/errorMiddleware.js';
 
-export const createContainer = ({ sql }) => {
+export const createContainer = ({ sql, jwtSecret }) => {
   const authRepo = createAuthRepository(sql);
-  const authServices = createAuthServices(authRepo);
+  const authServices = createAuthServices(authRepo, jwtSecret);
   const authController = createAuthController(authServices);
-  const authMiddleware = createAuthMiddleware();
+  const authMiddleware = createAuthMiddleware(jwtSecret);
   const authRoutes = createAuthRoutes(authController);
 
   const userRepo = createUserRepository(sql);

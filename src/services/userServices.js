@@ -1,8 +1,5 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
 
-// how deep the call log pager may go: past this, the answer is "narrow with
-// filters", not more scrolling. 50 pages of 25 rows keeps the 1,250 most
-// recent calls browsable
 const MAX_PAGES = 50;
 
 export const createUserServices = (userRepo) => ({
@@ -51,9 +48,6 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllActivePlans();
   },
 
-  // one numbered page of the call log, plus enough to draw the pager.
-  // the whole filter object passes through untouched, so a filter added to the
-  // query schema reaches the repository without this function changing
   getUsageLogPage: async (userId, { page, limit, api, from, to }) => {
     const offset = (page - 1) * limit;
 
@@ -64,14 +58,10 @@ export const createUserServices = (userRepo) => ({
     const pageCount = Math.min(fullPageCount, MAX_PAGES);
 
     return {
-      // a page past the cap serves no rows -- the cap is enforced, not cosmetic
       calls: page > pageCount ? [] : calls,
       total,
       page,
-      // camelCase locally, snake_case on the wire: the calls[] rows carry
-      // PostgreSQL's own column names, so the payload stays in one casing
       page_count: pageCount,
-      // true when the cap is what ended the pager, so the client can say why
       capped: fullPageCount > MAX_PAGES,
     };
   },
@@ -80,9 +70,6 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllApiProducts();
   },
 
-  // past payments plus the charge that is coming. both halves live in one
-  // response so the page needs a single request rather than stitching three
-  // together in the browser
   getPaymentHistory: async (userId) => {
     const payments = await userRepo.findPaymentHistory(userId);
 
@@ -94,8 +81,6 @@ export const createUserServices = (userRepo) => ({
       userRepo.findPlanById(subscription.plan_id),
     ]);
 
-    // the upcoming amount comes from the plan they are on NOW, not from the
-    // last payment -- those differ for a whole cycle after a plan change
     const upcoming = period && plan
       ? { due_on: period.next_bill_due, amount: plan.price_per_month, plan_name: plan.plan_name }
       : null;

@@ -5,10 +5,6 @@ import { makePlan, makeUser, } from './fixtures.js';
 import { testSql } from './testDb.js';
 
 const userRepository = createUserRepository(testSql);
-
-// the driver may hand a date column back as a Date or as 'YYYY-MM-DD'. Both
-// normalise to the same UTC calendar day through this, so the assertions below
-// do not depend on which one it chooses.
 const utcDay = (value) => new Date(value).toISOString().slice(0, 10);
 
 describe('subscribeToPlan', () => {
@@ -28,13 +24,9 @@ describe('subscribeToPlan', () => {
       FROM subscriptions
       WHERE user_id = ${user.user_id}`;
 
-    // an unset ended_at is what "active" means here -- it is the predicate
-    // one_active_subscription_per_user filters on
     expect(subscription.plan_id).toBe(plan.plan_id);
     expect(subscription.ended_at).toBeNull();
 
-    // looking the payment up by the returned id is what proves the id is real:
-    // if it were wrong or invented there would be no row to find
     const [payment] = await testSql`
       SELECT subscription_id, amount_paid, card_last4
       FROM payment_history
@@ -61,9 +53,6 @@ describe('subscribeToPlan', () => {
       JOIN subscriptions s ON s.subscription_id = p.subscription_id
       WHERE p.payment_id = ${paymentId}`;
 
-    // period_start is derived with (started_at AT TIME ZONE 'UTC')::date, so
-    // the first billing period opens on the calendar day the subscription
-    // began read in UTC -- not in whatever timezone the session is using
     expect(utcDay(row.period_start)).toBe(utcDay(row.started_at));
   });
 
@@ -78,9 +67,6 @@ describe('subscribeToPlan', () => {
       firstPlan.price_per_month,
     );
 
-    // nothing in the JavaScript enforces "one subscription at a time".
-    // one_active_subscription_per_user is a unique index over user_id filtered
-    // to ended_at IS NULL, and the second insert collides with it.
     await expect(
       userRepository.subscribeToPlan(
         user.user_id,
@@ -94,10 +80,6 @@ describe('subscribeToPlan', () => {
     const user = await makeUser();
     const plan = await makePlan();
 
-    // amount_paid is NOT NULL, so a null price fails the second insert of the
-    // transaction -- by which point the subscription row has already been
-    // written. Without a working transaction the user would be left subscribed
-    // but never billed.
     await expect(
       userRepository.subscribeToPlan(user.user_id, plan.plan_id, null),
     ).rejects.toThrow();
@@ -150,7 +132,6 @@ describe('changePlan', () => {
     expect(active.plan_id).toBe(newPlan.plan_id);
     expect(active.subscription_id).not.toBe(original.subscription_id);
 
-    // the charge belongs to the new subscription and is at the new price
     const [payment] = await testSql`
       SELECT subscription_id, amount_paid, card_last4
       FROM payment_history
@@ -183,11 +164,6 @@ describe('changePlan', () => {
       FROM subscriptions
       WHERE user_id = ${user.user_id}`;
 
-    // two rows for one user coexist without tripping
-    // one_active_subscription_per_user, because that index only covers rows
-    // where ended_at IS NULL and the UPDATE clears that first, inside the same
-    // transaction. The old row has to survive: findPaymentHistory reaches older
-    // payments by joining through it, so deleting it would erase billing history
     expect(subscriptions).toHaveLength(2);
     expect(
       subscriptions.filter((row) => row.ended_at === null),
@@ -210,10 +186,6 @@ describe('changePlan', () => {
       FROM subscriptions
       WHERE user_id = ${user.user_id}`;
 
-    // amount_paid is NOT NULL, so the payment insert fails after the UPDATE has
-    // already closed the old subscription and the new row has been written.
-    // Without a working transaction the user would end up with no active
-    // subscription at all -- silently unsubscribed by a failed plan change
     await expect(
       userRepository.changePlan(user.user_id, newPlan.plan_id, null),
     ).rejects.toThrow();
@@ -251,10 +223,6 @@ describe('changePlan', () => {
       JOIN subscriptions s ON s.subscription_id = p.subscription_id
       WHERE s.user_id = ${user.user_id}`;
 
-    // KNOWN QUIRK: payment_once_per_period is unique on
-    // (subscription_id, period_start), and every change mints a new
-    // subscription_id, so the constraint cannot see that this is the same user
-    // on the same day. Two charges land. Pinned as-is.
     expect(payments).toHaveLength(2);
     expect(utcDay(payments[0].period_start)).toBe(
       utcDay(payments[1].period_start),

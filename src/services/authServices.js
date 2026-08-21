@@ -21,24 +21,24 @@ const createClaims = (id) => {
   return {"id":id};
 }
 
-const createToken = async (claims) => {
-  const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+export const createAuthServices = (authRepository, jwtSecret) => {
+  const createToken = async (claims) => {
     return await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h')
-      .sign(secret)
-};
+      .sign(jwtSecret)
+  };
 
-const issueToken = async (id) => {
-  const claims = createClaims(id);
+  const issueToken = async (id) => {
+    const claims = createClaims(id);
 
-  const token = await createToken(claims);
+    const token = await createToken(claims);
 
-  return token;
-}
+    return token;
+  }
 
-export const createAuthServices = (authRepository) => ({
+  return {
     authenticateUser: async (name, password) => {
         const userCredentials = await authRepository.findUserCredentials(name) ?? null;
         
@@ -76,6 +76,7 @@ export const createAuthServices = (authRepository) => ({
         const signedToken = await issueToken(user_id);
 
         return signedToken;
-    },    
-});
+    },
+  };
+};
 

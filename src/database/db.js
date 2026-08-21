@@ -1,10 +1,3 @@
-// import postgres from 'postgres';
-
-// export const createDb = (connectionString = process.env.DATABASE_URL) => {
-//   return postgres(connectionString, {
-//     ssl: { rejectUnauthorized: false },
-//   });
-// };
 import postgres from 'postgres';
 
 const getDebugOption = () => {

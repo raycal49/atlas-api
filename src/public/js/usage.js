@@ -11,9 +11,6 @@ const noCalls = document.querySelector("#noCalls");
 const pager = document.querySelector("#pager");
 const pageStatus = document.querySelector("#pageStatus");
 
-// the page's whole state is the URL: filters and page number both live in the
-// query string, and every pager link is just this URL with a different page.
-// that is what makes Back, bookmarks and shared links work with no code
 const params = new URLSearchParams(location.search);
 
 const pageHref = (page) => {
@@ -22,20 +19,14 @@ const pageHref = (page) => {
     return `/usage?${next}`;
 };
 
-// used_at is a real instant, so the local clock is the right thing to show it in
 const when = (value) => new Date(value).toLocaleString();
 
-// empty fields would submit as ?api=&from=&to= -- drop them so the URL only
-// carries filters that are actually set. Purely cosmetic: the server treats an
-// empty value as absent either way
 filtersForm.addEventListener("formdata", (event) => {
     for (const [name, value] of [...event.formData]) {
         if (value === "") event.formData.delete(name);
     }
 });
 
-// the dropdown options come from the server so a newly added API product shows
-// up here without a page edit
 const fillApiOptions = (apis) => {
     for (const api of apis) {
         const option = document.createElement("option");
@@ -53,8 +44,6 @@ const syncDateBounds = () => {
 fromInput.addEventListener("input", syncDateBounds);
 toInput.addEventListener("input", syncDateBounds);
 
-// after a reload the inputs start blank, so the active filters are copied back
-// out of the URL -- the form always shows what the table is filtered by
 const restoreFilters = () => {
     apiSelect.value = params.get("api") ?? "";
     fromInput.value = params.get("from") ?? "";
@@ -62,8 +51,6 @@ const restoreFilters = () => {
     syncDateBounds();
 };
 
-// one row per call, built with createElement/textContent so api names are
-// always treated as text and never as HTML
 const renderCalls = (calls) => {
     const fragment = document.createDocumentFragment();
 
@@ -93,8 +80,6 @@ const pageItem = (content, { href = null, current = false, disabled = false } = 
     if (current) item.classList.add("active");
     if (disabled) item.classList.add("disabled");
 
-    // a disabled step gets a span: an anchor would need the tabindex="-1" +
-    // aria-disabled workaround to stop acting like a link
     const link = document.createElement(href && !disabled ? "a" : "span");
     link.className = "page-link";
     link.textContent = content;
@@ -105,7 +90,6 @@ const pageItem = (content, { href = null, current = false, disabled = false } = 
     return item;
 };
 
-// up to 5 page numbers centred on the current page, clamped to the ends
 const windowPages = (page, pageCount) => {
     const start = Math.max(1, Math.min(page - 2, pageCount - 4));
     const end = Math.min(pageCount, start + 4);
@@ -113,7 +97,6 @@ const windowPages = (page, pageCount) => {
 };
 
 const renderPager = (page, pageCount) => {
-    // a single page needs no pager at all
     if (pageCount <= 1) {
         pager.classList.add("d-none");
         return;
@@ -132,16 +115,13 @@ const renderPager = (page, pageCount) => {
 
 async function loadPage() {
     try {
-        // the log request forwards the URL's own query string; the two fetches
-        // are independent, so they run at the same time
         const [apisData, logData] = await Promise.all([
             getJson("/usage/apis"),
             getJson(`/usage/log?${params}`),
         ]);
 
-        // a null means getJson saw a 401 and the browser is already navigating
-        // to the login page -- there is nothing left to render
-        if (!apisData || !logData) return;
+        if (!apisData || !logData)
+            return;
 
         fillApiOptions(apisData.apis);
         restoreFilters();
@@ -155,8 +135,6 @@ async function loadPage() {
             return;
         }
 
-        // a stale or hand-edited URL can point past the last page -- offer the
-        // way back rather than showing an empty table
         if (page > page_count) {
             logTableWrap.classList.add("d-none");
             pageStatus.replaceChildren("This page is out of range. ");
@@ -170,9 +148,6 @@ async function loadPage() {
         renderCalls(calls);
         pageStatus.textContent =
             `Page ${page} of ${page_count} · ${total.toLocaleString()} call${total === 1 ? "" : "s"}`;
-        // the server stops the pager at a cap; say so, or the log looks shorter
-        // than the call count next to it. page_count is the cap here, so the
-        // text can never quote a different number than the server enforced
         if (capped) {
             pageStatus.textContent +=
                 ` — showing the most recent ${page_count} pages; narrow with filters to see older calls`;
