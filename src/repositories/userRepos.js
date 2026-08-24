@@ -5,6 +5,8 @@ import {
 
 const UNIQUE_VIOLATION = '23505';
 
+export const USAGE_PAGE_SIZE = 25;
+
 const insertSubscriptionWithPayment = async (sql, userId, planId, pricePerMonth, cardLast4) => {
   const [sub] = await sql`
     INSERT INTO subscriptions (user_id, plan_id)
@@ -90,30 +92,24 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  findUsageLogPage: async (userId, { api, from, to }, limit, offset) => {
+  findUsageLogPage: async (userId, { api, from, to }, cursor) => {
     const filters = sql`
       u.user_id = ${userId}
       ${api ? sql`AND u.api_product_id = ${api}` : sql``}
-      ${from ? sql`AND u.used_at >= ${from}::date` : sql``}
-      ${to ? sql`AND u.used_at < ${to}::date + 1` : sql``}`;
+      ${from ? sql`AND u.used_at >= ${from}::timestamptz` : sql``}
+      ${to ? sql`AND u.used_at <  ${to}::timestamptz` : sql``}`;
 
-    const callsQuery = sql`
-      SELECT u.api_usage_id, u.used_at, ap.api_name 
+    const keyset = cursor
+      ? sql`AND (u.used_at, u.api_usage_id) < (${cursor.at}::timestamptz, ${cursor.id}::bigint)`
+      : sql``;
+
+    return await sql`
+      SELECT u.api_usage_id, u.used_at, ap.api_name
       FROM api_usage u JOIN api_products ap ON ap.api_product_id = u.api_product_id
       WHERE ${filters}
+      ${keyset}
       ORDER BY u.used_at DESC, u.api_usage_id DESC
-      LIMIT ${limit} OFFSET ${offset}`;
-
-    const countQuery = sql`
-      SELECT COUNT(*)::int AS total
-      FROM api_usage u
-      WHERE ${filters}`;
-
-    const [calls, countRows] = await Promise.all([callsQuery, countQuery]);
-
-    const total = countRows[0].total;
-
-    return { calls, total };
+      LIMIT ${USAGE_PAGE_SIZE + 1}`;
   },
 
   findAllApiProducts: async () => {

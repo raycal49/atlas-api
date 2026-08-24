@@ -1,6 +1,5 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
-
-const MAX_PAGES = 50;
+import { USAGE_PAGE_SIZE } from '../repositories/userRepos.js';
 
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
@@ -48,21 +47,18 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllActivePlans();
   },
 
-  getUsageLogPage: async (userId, { page, limit, api, from, to }) => {
-    const offset = (page - 1) * limit;
+  getUsageLogPage: async (userId, { api, from, to, cursor }) => {
+    const rows = await userRepo.findUsageLogPage(userId, { api, from, to }, cursor);
 
-    const { calls, total } = await userRepo.findUsageLogPage(
-      userId, { api, from, to }, limit, offset);
-
-    const fullPageCount = Math.max(1, Math.ceil(total / limit));
-    const pageCount = Math.min(fullPageCount, MAX_PAGES);
+    const calls = rows.slice(0, USAGE_PAGE_SIZE);
+    const logContinues = rows.length > USAGE_PAGE_SIZE;
+    const last = logContinues ? calls.at(-1) : null;
 
     return {
-      calls: page > pageCount ? [] : calls,
-      total,
-      page,
-      page_count: pageCount,
-      capped: fullPageCount > MAX_PAGES,
+      calls,
+      next_cursor: last
+        ? { at: new Date(last.used_at).toISOString(), id: last.api_usage_id }
+        : null,
     };
   },
 
