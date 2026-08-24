@@ -1,2 +1,3 @@
 .auth-in  [data-auth="out"] { display: none !important; }
 .auth-out [data-auth="in"]  { display: none !important; }
+caption.visually-hidden { margin: 0 !important; }
