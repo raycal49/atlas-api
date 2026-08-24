@@ -5,26 +5,20 @@ const blankable = (schema) =>
 
 export const usageLogQuerySchema = z
   .object({
-    page: z.coerce
-      .number()
-      .int('Page must be a whole number')
-      .min(1, 'Page must be at least 1')
-      .default(1),
-
-    limit: z.coerce
-      .number()
-      .int('Limit must be a whole number')
-      .min(1, 'Limit must be at least 1')
-      .max(100, 'Limit must be at most 100')
-      .default(25),
-
     api: blankable(z.uuid('API must be a valid id')),
 
-    from: blankable(z.iso.date('From must be a date (YYYY-MM-DD)')),
-    to: blankable(z.iso.date('To must be a date (YYYY-MM-DD)')),
+    from: blankable(z.iso.datetime('From must be an ISO datetime')),
+    to: blankable(z.iso.datetime('To must be an ISO datetime')),
+
+    cursor_at: blankable(z.iso.datetime('Cursor time must be an ISO datetime')),
+    cursor_id: blankable(z.string().regex(/^\d+$/, 'Cursor id must be digits')),
   })
   .strict()
-  .refine((query) => !query.from || !query.to || query.from <= query.to, {
-    message: 'From date must be on or before the to date',
+  .refine((query) => !query.from || !query.to || query.from < query.to, {
+    message: 'From date must be before the to date',
     path: ['from'],
+  })
+  .refine((query) => Boolean(query.cursor_at) === Boolean(query.cursor_id), {
+    message: 'Cursor time and cursor id must be sent together',
+    path: ['cursor_at'],
   });

@@ -8,18 +8,31 @@ const toInput = document.querySelector("#to");
 const logTableWrap = document.querySelector("#logTableWrap");
 const logBody = document.querySelector("#logBody");
 const noCalls = document.querySelector("#noCalls");
-const pager = document.querySelector("#pager");
+const loadMore = document.querySelector("#loadMore");
 const pageStatus = document.querySelector("#pageStatus");
 
 const params = new URLSearchParams(location.search);
 
-const pageHref = (page) => {
-    const next = new URLSearchParams(params);
-    next.set("page", String(page));
-    return `/usage?${next}`;
-};
+params.delete("page");
+params.delete("limit");
+params.delete("cursor_at");
+params.delete("cursor_id");
+
+let cursor = null;
+let loading = false;
+let loadedCount = 0;
 
 const when = (value) => new Date(value).toLocaleString();
+
+const DATE_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
+
+const localDayBoundary = (isoDate, dayOffset) => {
+    if (!DATE_SHAPE.test(isoDate))
+        return isoDate;
+    
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Date(year, month - 1, day + dayOffset).toISOString();
+};
 
 filtersForm.addEventListener("formdata", (event) => {
     for (const [name, value] of [...event.formData]) {
@@ -51,7 +64,7 @@ const restoreFilters = () => {
     syncDateBounds();
 };
 
-const renderCalls = (calls) => {
+const renderCalls = (calls, replace) => {
     const fragment = document.createDocumentFragment();
 
     for (const call of calls) {
@@ -71,88 +84,80 @@ const renderCalls = (calls) => {
         fragment.append(row);
     }
 
-    logBody.replaceChildren(fragment);
+    if (replace) logBody.replaceChildren(fragment);
+    else logBody.append(fragment);
 };
 
-const pageItem = (content, { href = null, current = false, disabled = false } = {}) => {
-    const item = document.createElement("li");
-    item.className = "page-item";
-    if (current) item.classList.add("active");
-    if (disabled) item.classList.add("disabled");
+const logUrl = () => {
+    const query = new URLSearchParams(params);
 
-    const link = document.createElement(href && !disabled ? "a" : "span");
-    link.className = "page-link";
-    link.textContent = content;
-    if (href && !disabled) link.href = href;
-    if (current) item.setAttribute("aria-current", "page");
+    const from = params.get("from");
+    const to = params.get("to");
 
-    item.append(link);
-    return item;
-};
+    if (from) query.set("from", localDayBoundary(from, 0));
+    if (to) query.set("to", localDayBoundary(to, 1));
 
-const windowPages = (page, pageCount) => {
-    const start = Math.max(1, Math.min(page - 2, pageCount - 4));
-    const end = Math.min(pageCount, start + 4);
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-};
-
-const renderPager = (page, pageCount) => {
-    if (pageCount <= 1) {
-        pager.classList.add("d-none");
-        return;
+    if (cursor) {
+        query.set("cursor_at", cursor.at);
+        query.set("cursor_id", cursor.id);
     }
 
-    const items = [
-        pageItem("Previous", { href: pageHref(page - 1), disabled: page === 1 }),
-        ...windowPages(page, pageCount).map((n) =>
-            pageItem(String(n), { href: pageHref(n), current: n === page })),
-        pageItem("Next", { href: pageHref(page + 1), disabled: page === pageCount }),
-    ];
-
-    pager.replaceChildren(...items);
-    pager.classList.remove("d-none");
+    return `/usage/log?${query}`;
 };
 
-async function loadPage() {
+const describeLoaded = () => {
+    const plural = loadedCount === 1 ? "" : "s";
+    const scope = cursor ? "Showing" : "Showing all";
+    return `${scope} ${loadedCount.toLocaleString()} call${plural}`;
+};
+
+const applyPage = (log, replace) => {
+    renderCalls(log.calls, replace);
+
+    loadedCount += log.calls.length;
+    cursor = log.next_cursor;
+
+    loadMore.classList.toggle("d-none", !cursor);
+    pageStatus.textContent = describeLoaded();
+};
+
+const showEmptyLog = () => {
+    logTableWrap.classList.add("d-none");
+    noCalls.classList.remove("d-none");
+    loadMore.classList.add("d-none");
+    pageStatus.textContent = "";
+};
+
+const startRequest = () => {
+    loading = true;
+    loadMore.disabled = true;
+    loadMore.textContent = "Loading\u2026";
+};
+
+const endRequest = () => {
+    loading = false;
+    loadMore.disabled = false;
+    loadMore.textContent = "Load more";
+};
+
+async function init() {
     try {
         const [apisData, logData] = await Promise.all([
             getJson("/usage/apis"),
-            getJson(`/usage/log?${params}`),
+            getJson(logUrl()),
         ]);
 
-        if (!apisData || !logData)
-            return;
+        if (!apisData || !logData) return;
 
         fillApiOptions(apisData.apis);
         restoreFilters();
 
-        const { calls, total, page, page_count, capped } = logData.log;
-
-        if (total === 0) {
-            logTableWrap.classList.add("d-none");
-            noCalls.classList.remove("d-none");
-            pageStatus.textContent = "";
+        if (logData.log.calls.length === 0) {
+            showEmptyLog();
             return;
         }
 
-        if (page > page_count) {
-            logTableWrap.classList.add("d-none");
-            pageStatus.replaceChildren("This page is out of range. ");
-            const back = document.createElement("a");
-            back.href = pageHref(1);
-            back.textContent = "Go to page 1";
-            pageStatus.append(back);
-            return;
-        }
-
-        renderCalls(calls);
-        pageStatus.textContent =
-            `Page ${page} of ${page_count} · ${total.toLocaleString()} call${total === 1 ? "" : "s"}`;
-        if (capped) {
-            pageStatus.textContent +=
-                ` — showing the most recent ${page_count} pages; narrow with filters to see older calls`;
-        }
-        renderPager(page, page_count);
+        applyPage(logData.log, true);
     } catch (e) {
         console.error(e);
         logTableWrap.classList.add("d-none");
@@ -160,4 +165,26 @@ async function loadPage() {
     }
 }
 
-loadPage();
+async function loadNextPage() {
+    if (loading || !cursor) return;
+
+    startRequest();
+
+    try {
+        const logData = await getJson(logUrl());
+
+        if (!logData) return;
+
+        showFormError(null);
+        applyPage(logData.log, false);
+    } catch (e) {
+        console.error(e);
+        showFormError("Could not load more calls. Please try again.");
+    } finally {
+        endRequest();
+    }
+}
+
+loadMore.addEventListener("click", loadNextPage);
+
+init();

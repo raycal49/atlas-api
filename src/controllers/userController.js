@@ -12,7 +12,9 @@ export const createUserController = (userServices) => ({
   },
 
   getUsagePage: async (req, res) => {
-    const log = await userServices.getUsageLogPage(req.tokenInfo.id, req.validatedQuery);
+    const { cursor_at, cursor_id, ...filters } = req.validatedQuery;
+    const cursor = cursor_at ? { at: cursor_at, id: cursor_id } : null;
+    const log = await userServices.getUsageLogPage(req.tokenInfo.id, { ...filters, cursor });
 
     return res.status(200).json({ log });
   },
