@@ -62,8 +62,6 @@ describe('POST /subscriptions', () => {
 
     expect(result).toStrictEqual({ charged: true, paymentId: PAYMENT_ID });
   });
-<<<<<<< Updated upstream
-=======
 
   it('rejects a paid plan when no card is supplied', async () => {
     const { service, userRepo } = setup();
@@ -182,5 +180,4 @@ describe('POST /subscriptions', () => {
       expect(amountCharged(userRepo)).toBe('75.00');    // 150 x 14/28
     });
   });
->>>>>>> Stashed changes
 });

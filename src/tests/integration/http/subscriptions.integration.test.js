@@ -74,8 +74,6 @@ describe('POST /subscriptions', () => {
 
     expect(response.body).toBe("No active plan named 'no-such-plan'");
   });
-<<<<<<< Updated upstream
-=======
 
   it('subscribes to a free plan without a card', async () => {
     const user = await makeUser();
@@ -143,5 +141,4 @@ describe('POST /subscriptions', () => {
 
     expect(active.plan_id).toBe(paidPlan.plan_id);
   });
->>>>>>> Stashed changes
 });

@@ -1,32 +1,20 @@
 import { getJson, postForm } from "./api.js";
-<<<<<<< Updated upstream
-import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
-=======
 import { showFormError, showFormNotice, showFieldErrors, hideErrors, formatMoney, monthDay, daysBetween } from "./ui.js";
->>>>>>> Stashed changes
 
 const planList = document.querySelector("#planList");
 const paymentForm = document.querySelector("#paymentForm");
 const chosenPlanName = document.querySelector("#chosenPlanName");
 const submitBtn = paymentForm.querySelector('button[type="submit"]');
-<<<<<<< Updated upstream
-=======
 const cardField = document.querySelector("#cardField");
 const cardInput = document.querySelector("#card_number");
 const dueToday = document.querySelector("#dueToday");
 const effectiveNote = document.querySelector("#effectiveNote");
->>>>>>> Stashed changes
 const FIELDS = ["card_number"];
 
 let selectedPlan = null;
 let checkout = null;
 let currentPlan = null;   // GET /data payload for the signed-in user, or null
 
-<<<<<<< Updated upstream
-const choosePlan = (planName) => {
-    selectedPlan = planName;
-    chosenPlanName.textContent = planName;
-=======
 const isFree = (plan) => Number(plan.price_per_month) === 0;
 
 const isPlanChange = (plan) =>
@@ -112,7 +100,6 @@ const choosePlan = (plan) => {
     cardInput.required = checkout.needsCard;
     if (!checkout.needsCard) cardInput.value = "";
 
->>>>>>> Stashed changes
     hideErrors(FIELDS);
     paymentForm.classList.remove("d-none");
     paymentForm.scrollIntoView({ behavior: "smooth" });
@@ -194,17 +181,10 @@ async function payForPlan() {
     submitBtn.disabled = true;
 
     try {
-<<<<<<< Updated upstream
-        const { ok, status, body } = await postForm("/subscriptions", {
-            plan_name: selectedPlan,
-            card_number: document.querySelector("#card_number").value,
-        });
-=======
         const fields = { plan_name: selectedPlan.plan_name };
         if (checkout.needsCard) fields.card_number = cardInput.value;
 
         const { ok, status, body } = await postForm("/subscriptions", fields);
->>>>>>> Stashed changes
 
         if (ok) {
             if (body?.scheduled) {

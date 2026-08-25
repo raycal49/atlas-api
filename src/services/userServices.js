@@ -36,15 +36,6 @@ export const createUserServices = (userRepo) => ({
 
     const current = await userRepo.findActiveSubscription(userId);
 
-<<<<<<< Updated upstream
-    if (!current)
-      return userRepo.subscribeToPlan(userId, plan.plan_id, plan.price_per_month, cardLast4);
-
-    if (current.plan_id === plan.plan_id)
-      throw new AlreadyOnPlanError();
-
-    return userRepo.changePlan(userId, plan.plan_id, plan.price_per_month, cardLast4);
-=======
     if (!current) {
       assertCard(newPlan.price_per_month, cardLast4);
 
@@ -69,7 +60,6 @@ export const createUserServices = (userRepo) => ({
 
     const paymentId = await userRepo.changePlan(userId, newPlan.plan_id, amount, cardLast4);
     return { charged: true, paymentId };
->>>>>>> Stashed changes
   },
 
   getCurrentSubscription: async (userId) => {
