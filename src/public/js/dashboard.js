@@ -1,5 +1,5 @@
 import { getJson } from "./api.js";
-import { showFormError, formatCount, formatMoney } from "./ui.js";
+import { showFormError, formatCount, formatMoney, monthDay, daysBetween } from "./ui.js";
 
 const myPlanSection = document.querySelector("#myPlanSection");
 const pickPlanPrompt = document.querySelector("#pickPlanPrompt");
@@ -16,20 +16,11 @@ const percentOf = (used, limit) =>
 const stateFor = (percent) =>
     percent >= CRITICAL_AT ? "critical" : percent >= WARNING_AT ? "warning" : "ok";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 const daysUntil = (value) => {
     if (!value) return null;
+    if (Number.isNaN(new Date(value).getTime())) return null;
 
-    const due = new Date(value);
-    if (Number.isNaN(due.getTime())) return null;
-
-    const dueMidnight = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-
-    const now = new Date();
-    const todayMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-
-    return Math.round((dueMidnight - todayMidnight) / MS_PER_DAY);
+    return daysBetween(new Date(), value);
 };
 
 const STATE = {
@@ -48,9 +39,6 @@ const STATE = {
         badge: "#criticalBadge",
     },
 };
-
-const monthDay = (value) =>
-    new Date(value).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" });
 
 const periodLabel = (start, end) => {
     if (!start || !end) return "";

@@ -1,6 +1,34 @@
 import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
 import { USAGE_PAGE_SIZE } from '../repositories/userRepos.js';
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const utcMidnight = (value) => {
+  const date = new Date(value);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+};
+
+const daysBetween = (from, to) => (utcMidnight(to) - utcMidnight(from)) / MS_PER_DAY;
+
+const prorateUpgrade = (currentPrice, newPrice, { period_start, next_bill_due }) => {
+  const difference = Number(newPrice) - Number(currentPrice);
+
+  // Nothing was paid for a free period, so there is no part-month to credit against.
+  if (Number(currentPrice) === 0) return difference.toFixed(2);
+
+  const totalDays = daysBetween(period_start, next_bill_due);
+  const daysRemaining = daysBetween(new Date(), next_bill_due);
+
+  // Past the due date the period would have rolled over, so a full period is owed.
+  const billableDays = daysRemaining <= 0 ? totalDays : daysRemaining;
+
+  return (difference * billableDays / totalDays).toFixed(2);
+};
+
+const assertCard = (price, cardLast4) => {
+  if (Number(price) > 0 && !cardLast4) throw new CardRequiredError();
+};
+
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const plan = await userRepo.findActivePlanByName(planName);
@@ -8,6 +36,7 @@ export const createUserServices = (userRepo) => ({
 
     const current = await userRepo.findActiveSubscription(userId);
 
+<<<<<<< Updated upstream
     if (!current)
       return userRepo.subscribeToPlan(userId, plan.plan_id, plan.price_per_month, cardLast4);
 
@@ -15,6 +44,32 @@ export const createUserServices = (userRepo) => ({
       throw new AlreadyOnPlanError();
 
     return userRepo.changePlan(userId, plan.plan_id, plan.price_per_month, cardLast4);
+=======
+    if (!current) {
+      assertCard(newPlan.price_per_month, cardLast4);
+
+      const paymentId = await userRepo.subscribeToPlan(
+        userId, newPlan.plan_id, newPlan.price_per_month, cardLast4);
+      return { charged: true, paymentId };
+    }
+
+    if (current.plan_id === newPlan.plan_id)
+      throw new AlreadyOnPlanError();
+
+    const currentPlan = await userRepo.findPlanById(current.plan_id);
+
+    if (Number(newPlan.price_per_month) <= Number(currentPlan.price_per_month))
+      return { charged: false, plan_name: planName };
+
+    assertCard(newPlan.price_per_month, cardLast4);
+
+    const period = await userRepo.findCurrentPeriod(current.subscription_id);
+    const amount = prorateUpgrade(
+      currentPlan.price_per_month, newPlan.price_per_month, period);
+
+    const paymentId = await userRepo.changePlan(userId, newPlan.plan_id, amount, cardLast4);
+    return { charged: true, paymentId };
+>>>>>>> Stashed changes
   },
 
   getCurrentSubscription: async (userId) => {

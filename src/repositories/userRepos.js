@@ -147,14 +147,14 @@ export const createUserRepository = (sql) => ({
     }
   },
 
-  changePlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
+  changePlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
       return await sql.begin(async (sql) => {
         await sql`
           UPDATE subscriptions SET ended_at = now()
           WHERE user_id = ${userId} AND ended_at IS NULL`;
 
-        return insertSubscriptionWithPayment(sql, userId, planId, pricePerMonth, cardLast4);
+        return insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4);
       });
     } catch (err) {
       throw translateUniqueViolation(err);
