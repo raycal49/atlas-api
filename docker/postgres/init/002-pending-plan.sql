@@ -3,4 +3,4 @@ ALTER TABLE "public"."subscriptions"
 
 
 ALTER TABLE ONLY "public"."subscriptions"
-    ADD CONSTRAINT "subscriptions_pending_plan_id_fkey" FOREIGN KEY ("pending_plan_id") REFERENCES "public"."plans"("plan_id") ON UPDATE CASCADE ON DELETE SET NULL;
+    ADD CONSTRAINT "subscriptions_pending_plan_id_fkey" FOREIGN KEY ("pending_plan_id") REFERENCES "public"."plans"("plan_id") ON UPDATE NO ACTION ON DELETE SET NULL;
