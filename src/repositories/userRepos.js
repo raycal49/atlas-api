@@ -7,7 +7,7 @@ const UNIQUE_VIOLATION = '23505';
 
 export const USAGE_PAGE_SIZE = 25;
 
-const insertSubscriptionWithPayment = async (sql, userId, planId, pricePerMonth, cardLast4) => {
+const insertSubscriptionWithPayment = async (sql, userId, planId, amount, cardLast4) => {
   const [sub] = await sql`
     INSERT INTO subscriptions (user_id, plan_id)
     VALUES (${userId}, ${planId})
@@ -17,7 +17,7 @@ const insertSubscriptionWithPayment = async (sql, userId, planId, pricePerMonth,
     INSERT INTO payment_history
       (subscription_id, amount_paid, card_last4, period_start)
     VALUES
-      (${sub.subscription_id}, ${pricePerMonth}, ${cardLast4},
+      (${sub.subscription_id}, ${amount}, ${cardLast4},
        (${sub.started_at} AT TIME ZONE 'UTC')::date)
     RETURNING payment_id`;
 
@@ -138,10 +138,10 @@ export const createUserRepository = (sql) => ({
     ORDER BY ap.api_name`
   },
 
-  subscribeToPlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
+  subscribeToPlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
       return await sql.begin((sql) =>
-        insertSubscriptionWithPayment(sql, userId, planId, pricePerMonth, cardLast4));
+        insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4));
     } catch (err) {
       throw translateUniqueViolation(err);
     }
