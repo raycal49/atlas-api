@@ -7,10 +7,26 @@ export class InvalidPlanError extends Error {
   }
 }
 
+export class CardRequiredError extends Error {
+  constructor(options) {
+    super("Card number is required for paid plans", options);
+    this.name = "CardRequired";
+    this.statusCode = 400;
+  }
+}
+
 export class AlreadyOnPlanError extends Error {
   constructor(options) {
     super("Already subscribed to this plan", options);
     this.name = "AlreadyOnPlan";
+    this.statusCode = 409;
+  }
+}
+
+export class AlreadyScheduledPlanError extends Error {
+  constructor(options) {
+    super("This plan is already scheduled", options);
+    this.name = "AlreadyScheduledPlan";
     this.statusCode = 409;
   }
 }

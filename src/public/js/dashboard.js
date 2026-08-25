@@ -55,6 +55,14 @@ const daysLabel = (days) => {
     return `in ${days} days`;
 }
 
+const planPriceLabel = (price, pendingPlan, billDue) => {
+    const priceLine = `${formatMoney(price)} / month`;
+
+    if (!pendingPlan) return priceLine;
+    if (!billDue) return `${priceLine} · Changes to ${pendingPlan}`;
+    return `${priceLine} · Changes to ${pendingPlan} ${monthDay(billDue)}`;
+}
+
 const toApiRow = (api) => {
     const percentUsed = percentOf(api.calls_used, api.monthly_limit);
 
@@ -70,7 +78,7 @@ const toApiRow = (api) => {
 
 const renderKpis = (data, apis) => {
     document.querySelector("#planName").textContent = data.plan ?? "—";
-    document.querySelector("#planPrice").textContent = `${formatMoney(data.price)} / month`;
+    document.querySelector("#planPrice").textContent = planPriceLabel(data.price, data.pending_plan, data.bill_due);
 
     document.querySelector("#nextBillDue").textContent = data.bill_due
         ? monthDay(data.bill_due)

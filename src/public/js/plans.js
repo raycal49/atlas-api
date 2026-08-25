@@ -26,6 +26,11 @@ const isDowngrade = (plan) =>
 const isUpgrade = (plan) =>
     isPlanChange(plan) && Number(plan.price_per_month) > Number(currentPlan.price);
 
+const isCurrent = (plan) => currentPlan !== null && !isPlanChange(plan);
+
+const isScheduled = (plan) =>
+    currentPlan?.pending_plan != null && plan.plan_name === currentPlan.pending_plan;
+
 const startOfNextCycle = () =>
     currentPlan?.bill_due ? monthDay(currentPlan.bill_due) : null;
 
@@ -135,7 +140,13 @@ const renderPlans = (plans) => {
         chooseBtn.className = "btn btn-primary mt-auto";
         chooseBtn.dataset.auth = "in";
         chooseBtn.textContent = "Choose";
-        chooseBtn.addEventListener("click", () => choosePlan(plan.plan_name));
+        chooseBtn.addEventListener("click", () => choosePlan(plan));
+
+        if (isScheduled(plan) || isCurrent(plan)) {
+            chooseBtn.textContent = isScheduled(plan) ? "Scheduled" : "Current plan";
+            chooseBtn.className = "btn btn-outline-secondary mt-auto";
+            chooseBtn.disabled = true;
+        }
 
         const signInLink = document.createElement("a");
         signInLink.className = "btn btn-outline-secondary mt-auto";

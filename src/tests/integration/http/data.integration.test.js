@@ -27,6 +27,11 @@ const PLAN = {
   PRICE: '9.99',
 };
 
+const PENDING_PLAN = {
+  NAME: 'free',
+  PRICE: '0.00',
+};
+
 const API_NAME = 'geocode';
 const MONTHLY_LIMIT = 1000;
 const CALLS_MADE = 3;
@@ -93,6 +98,7 @@ describe('GET /data', () => {
 
     expect(response.body.dashboardData).toEqual({
       plan: PLAN.NAME,
+      pending_plan: null,
       plan_start: BILL_START,
       price: PLAN.PRICE,
       bill_start: BILL_START,
@@ -105,6 +111,35 @@ describe('GET /data', () => {
           calls_used: CALLS_MADE,
         },
       ],
+    });
+  });
+
+  it('names a scheduled plan change without moving the current plan', async () => {
+    const user = await makeUser();
+    await givenSubscribedUser(user.user_id);
+
+    const pendingPlan = await makePlan({
+      plan_name: PENDING_PLAN.NAME,
+      price_per_month: PENDING_PLAN.PRICE,
+    });
+
+    await testSql`
+      UPDATE subscriptions
+      SET pending_plan_id = ${pendingPlan.plan_id}
+      WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
+
+    const response = await request(app)
+      .get('/data')
+      .set('Accept', 'application/json')
+      .set('Cookie', await tokenCookieFor(user.user_id))
+      .expect(200);
+
+    const { plan, price, pending_plan } = response.body.dashboardData;
+
+    expect({ plan, price, pending_plan }).toEqual({
+      plan: PLAN.NAME,
+      price: PLAN.PRICE,
+      pending_plan: PENDING_PLAN.NAME,
     });
   });
 

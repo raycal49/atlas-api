@@ -1,4 +1,9 @@
-import { InvalidPlanError, AlreadyOnPlanError } from '../errors/userErrors.js';
+import {
+  InvalidPlanError,
+  CardRequiredError,
+  AlreadyOnPlanError,
+  AlreadyScheduledPlanError,
+} from '../errors/userErrors.js';
 import { USAGE_PAGE_SIZE } from '../repositories/userRepos.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -31,8 +36,8 @@ const assertCard = (price, cardLast4) => {
 
 export const createUserServices = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
-    const plan = await userRepo.findActivePlanByName(planName);
-    if (!plan) throw new InvalidPlanError(planName);
+    const newPlan = await userRepo.findActivePlanByName(planName);
+    if (!newPlan) throw new InvalidPlanError(planName);
 
     const current = await userRepo.findActiveSubscription(userId);
 
@@ -47,10 +52,15 @@ export const createUserServices = (userRepo) => ({
     if (current.plan_id === newPlan.plan_id)
       throw new AlreadyOnPlanError();
 
+    if (current.pending_plan_id === newPlan.plan_id)
+      throw new AlreadyScheduledPlanError();
+
     const currentPlan = await userRepo.findPlanById(current.plan_id);
 
-    if (Number(newPlan.price_per_month) <= Number(currentPlan.price_per_month))
+    if (Number(newPlan.price_per_month) <= Number(currentPlan.price_per_month)) {
+      await userRepo.schedulePlanChange(userId, newPlan.plan_id);
       return { charged: false, plan_name: planName };
+    }
 
     assertCard(newPlan.price_per_month, cardLast4);
 
@@ -72,12 +82,17 @@ export const createUserServices = (userRepo) => ({
 
     const subscribedPlan = await userRepo.findPlanById(subscription.plan_id)
 
+    const pendingPlan = subscription.pending_plan_id
+      ? await userRepo.findPlanById(subscription.pending_plan_id)
+      : null;
+
     const currentPeriod = await userRepo.findCurrentPeriod(subscription.subscription_id);
 
     const apiData = await userRepo.getPeriodApiCalls(userId, currentPeriod.period_start, subscription.plan_id); // NECESSARY ITEM 3
     
     const data = {
       plan: subscribedPlan.plan_name,
+      pending_plan: pendingPlan?.plan_name ?? null,
       plan_start: subscription.started_at,
       price: subscribedPlan.price_per_month,
       bill_start: currentPeriod.period_start,
@@ -119,7 +134,7 @@ export const createUserServices = (userRepo) => ({
 
     const [period, plan] = await Promise.all([
       userRepo.findCurrentPeriod(subscription.subscription_id),
-      userRepo.findPlanById(subscription.plan_id),
+      userRepo.findPlanById(subscription.pending_plan_id ?? subscription.plan_id),
     ]);
 
     const upcoming = period && plan

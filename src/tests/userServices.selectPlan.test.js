@@ -1,16 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AlreadyOnPlanError } from '../errors/userErrors.js';
+import {
+  AlreadyOnPlanError,
+  AlreadyScheduledPlanError,
+  CardRequiredError,
+} from '../errors/userErrors.js';
 import { setup, USER_ID } from './userServicesHarness.js';
 
 const CARD_LAST4 = '4211';
 
 const CURRENT_PLAN_ID = '06188b55-8cf3';
 const OTHER_PLAN_ID = '12627n25-1ce9';
+const THIRD_PLAN_ID = '55031f80-2b7c';
 
 const ACTIVE_SUBSCRIPTION = {
   subscription_id: '417e-9664',
   plan_id: CURRENT_PLAN_ID,
+  pending_plan_id: null,
   started_at: '2012-02-12',
 };
 
@@ -91,6 +97,7 @@ describe('POST /subscriptions', () => {
     expect(result).toStrictEqual({ charged: false, plan_name: 'SuperSaver' });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
     expect(userRepo.subscribeToPlan).not.toHaveBeenCalled();
+    expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, OTHER_PLAN_ID);
   });
 
   it('does not require a card to schedule a downgrade to a paid plan', async () => {
@@ -123,6 +130,60 @@ describe('POST /subscriptions', () => {
 
     expect(result).toStrictEqual({ charged: false, plan_name: 'SuperSaver' });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
+  });
+
+  it('rejects a plan that is already scheduled for the next cycle', async () => {
+    const { service, userRepo } = setup();
+
+    userRepo.findActivePlanByName.mockResolvedValue({
+      plan_id: OTHER_PLAN_ID,
+      price_per_month: '9.99',
+    });
+    userRepo.findActiveSubscription.mockResolvedValue({
+      ...ACTIVE_SUBSCRIPTION,
+      pending_plan_id: OTHER_PLAN_ID,
+    });
+
+    await expect(
+      service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4),
+    ).rejects.toThrow(AlreadyScheduledPlanError);
+
+    expect(userRepo.schedulePlanChange).not.toHaveBeenCalled();
+  });
+
+  it('replaces a pending downgrade when they schedule a different plan', async () => {
+    const { service, userRepo } = setup();
+
+    userRepo.findActivePlanByName.mockResolvedValue({
+      plan_id: THIRD_PLAN_ID,
+      price_per_month: '49',
+    });
+    userRepo.findActiveSubscription.mockResolvedValue({
+      ...ACTIVE_SUBSCRIPTION,
+      pending_plan_id: OTHER_PLAN_ID,
+    });
+    userRepo.findPlanById.mockResolvedValue({ price_per_month: '199' });
+
+    const result = await service.selectPlan(USER_ID, 'Developer');
+
+    expect(result).toStrictEqual({ charged: false, plan_name: 'Developer' });
+    expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, THIRD_PLAN_ID);
+    expect(userRepo.changePlan).not.toHaveBeenCalled();
+  });
+
+  it('charges an upgrade immediately even while a downgrade is pending', async () => {
+    const { service, userRepo } = setup();
+
+    arrangeUpgrade(userRepo);
+    userRepo.findActiveSubscription.mockResolvedValue({
+      ...ACTIVE_SUBSCRIPTION,
+      pending_plan_id: THIRD_PLAN_ID,
+    });
+
+    const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
+
+    expect(result).toStrictEqual({ charged: true, paymentId: PAYMENT_ID });
+    expect(userRepo.schedulePlanChange).not.toHaveBeenCalled();
   });
 
   describe('proration on upgrade', () => {

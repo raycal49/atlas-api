@@ -228,4 +228,120 @@ describe('changePlan', () => {
       utcDay(payments[1].period_start),
     );
   });
+
+  it('clears a pending plan change when it ends the subscription', async () => {
+    const user = await makeUser();
+    const oldPlan = await makePlan();
+    const newPlan = await makePlan();
+    const pendingPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      oldPlan.plan_id,
+      oldPlan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, pendingPlan.plan_id);
+
+    await userRepository.changePlan(
+      user.user_id,
+      newPlan.plan_id,
+      newPlan.price_per_month,
+    );
+
+    const subscriptions = await testSql`
+      SELECT plan_id, pending_plan_id
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}
+      ORDER BY started_at`;
+
+    expect(subscriptions).toEqual([
+      { plan_id: oldPlan.plan_id, pending_plan_id: null },
+      { plan_id: newPlan.plan_id, pending_plan_id: null },
+    ]);
+  });
+});
+
+describe('schedulePlanChange', () => {
+  it('records the pending plan and leaves the active subscription in place', async () => {
+    const user = await makeUser();
+    const plan = await makePlan();
+    const pendingPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      plan.plan_id,
+      plan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, pendingPlan.plan_id);
+
+    const [subscription] = await testSql`
+      SELECT plan_id, pending_plan_id, ended_at
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}`;
+
+    expect(subscription).toEqual({
+      plan_id: plan.plan_id,
+      pending_plan_id: pendingPlan.plan_id,
+      ended_at: null,
+    });
+  });
+
+  it('replaces a pending plan rather than accumulating them', async () => {
+    const user = await makeUser();
+    const plan = await makePlan();
+    const firstPlan = await makePlan();
+    const secondPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      plan.plan_id,
+      plan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, firstPlan.plan_id);
+    await userRepository.schedulePlanChange(user.user_id, secondPlan.plan_id);
+
+    const subscriptions = await testSql`
+      SELECT plan_id, pending_plan_id
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}`;
+
+    expect(subscriptions).toEqual([
+      { plan_id: plan.plan_id, pending_plan_id: secondPlan.plan_id },
+    ]);
+  });
+
+  it('schedules against the active subscription and not an ended one', async () => {
+    const user = await makeUser();
+    const oldPlan = await makePlan();
+    const newPlan = await makePlan();
+    const pendingPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      oldPlan.plan_id,
+      oldPlan.price_per_month,
+    );
+
+    await userRepository.changePlan(
+      user.user_id,
+      newPlan.plan_id,
+      newPlan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, pendingPlan.plan_id);
+
+    const subscriptions = await testSql`
+      SELECT plan_id, pending_plan_id
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}
+      ORDER BY started_at`;
+
+    expect(subscriptions).toEqual([
+      { plan_id: oldPlan.plan_id, pending_plan_id: null },
+      { plan_id: newPlan.plan_id, pending_plan_id: pendingPlan.plan_id },
+    ]);
+  });
 });

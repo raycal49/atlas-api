@@ -77,7 +77,7 @@ describe('POST /subscriptions', () => {
 
   it('subscribes to a free plan without a card', async () => {
     const user = await makeUser();
-    const plan = await makePlan({ price_per_month: FREE_PRICE });
+    const plan = await makePlan({ price_per_month: '0' });
 
     const response = await request(app)
       .post('/subscriptions')
@@ -90,7 +90,7 @@ describe('POST /subscriptions', () => {
       FROM payment_history
       WHERE payment_id = ${response.body.paymentId}`;
 
-    expect(payment.amount_paid).toBe(FREE_PRICE);
+    expect(payment.amount_paid).toBe('0');
     expect(payment.card_last4).toBeNull();
   });
 
@@ -111,7 +111,7 @@ describe('POST /subscriptions', () => {
     const user = await makeUser();
     const cookie = await tokenCookieFor(user.user_id);
     const paidPlan = await makePlan({ price_per_month: PLAN_PRICE });
-    const freePlan = await makePlan({ price_per_month: FREE_PRICE });
+    const freePlan = await makePlan({ price_per_month: '0' });
 
     await request(app)
       .post('/subscriptions')
@@ -136,9 +136,39 @@ describe('POST /subscriptions', () => {
     expect(payments).toHaveLength(1);
 
     const [active] = await testSql`
-      SELECT plan_id FROM subscriptions
+      SELECT plan_id, pending_plan_id FROM subscriptions
       WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
 
-    expect(active.plan_id).toBe(paidPlan.plan_id);
+    expect(active).toEqual({
+      plan_id: paidPlan.plan_id,
+      pending_plan_id: freePlan.plan_id,
+    });
+  });
+
+  it('rejects a plan that is already scheduled for the next cycle', async () => {
+    const user = await makeUser();
+    const cookie = await tokenCookieFor(user.user_id);
+    const paidPlan = await makePlan({ price_per_month: PLAN_PRICE });
+    const freePlan = await makePlan({ price_per_month: '0' });
+
+    await request(app)
+      .post('/subscriptions')
+      .set('Cookie', cookie)
+      .send({ plan_name: paidPlan.plan_name, card_number: CARD.NUMBER })
+      .expect(201);
+
+    await request(app)
+      .post('/subscriptions')
+      .set('Cookie', cookie)
+      .send({ plan_name: freePlan.plan_name })
+      .expect(200);
+
+    const response = await request(app)
+      .post('/subscriptions')
+      .set('Cookie', cookie)
+      .send({ plan_name: freePlan.plan_name })
+      .expect(409);
+
+    expect(response.body).toBe('This plan is already scheduled');
   });
 });

@@ -10,6 +10,7 @@ export const setup = () => {
     findActiveSubscription: vi.fn(),
     subscribeToPlan: vi.fn(),
     changePlan: vi.fn(),
+    schedulePlanChange: vi.fn(),
     findCurrentPeriod: vi.fn(),
     findPaymentHistory: vi.fn(),
     findPlanById: vi.fn(),

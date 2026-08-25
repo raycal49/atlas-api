@@ -52,7 +52,7 @@ export const createUserRepository = (sql) => ({
 
   findActiveSubscription: async (userId) => {
     const rows = await sql`
-      SELECT subscription_id, plan_id, started_at
+      SELECT subscription_id, plan_id, pending_plan_id, started_at
       FROM subscriptions
       WHERE user_id = ${userId} AND ended_at IS NULL`;
     return rows[0];
@@ -151,7 +151,7 @@ export const createUserRepository = (sql) => ({
     try {
       return await sql.begin(async (sql) => {
         await sql`
-          UPDATE subscriptions SET ended_at = now()
+          UPDATE subscriptions SET ended_at = now(), pending_plan_id = NULL
           WHERE user_id = ${userId} AND ended_at IS NULL`;
 
         return insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4);
@@ -159,5 +159,12 @@ export const createUserRepository = (sql) => ({
     } catch (err) {
       throw translateUniqueViolation(err);
     }
+  },
+
+  schedulePlanChange: async (userId, planId) => {
+    await sql`
+      UPDATE subscriptions
+      SET pending_plan_id = ${planId}
+      WHERE user_id = ${userId} AND ended_at IS NULL`;
   },
 });

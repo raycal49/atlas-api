@@ -5,6 +5,7 @@ import { setup, USER_ID } from './userServicesHarness.js';
 const SUBSCRIPTION = {
   subscription_id: '417e-9664',
   plan_id: 'plan-business',
+  pending_plan_id: null,
   started_at: '2026-06-15',
 };
 
@@ -63,5 +64,31 @@ describe('GET /payments/me', () => {
 
     expect(result.upcoming).toBe(null);
     expect(result.payments).toStrictEqual([]);
+  });
+
+  it('prices the next charge from a scheduled downgrade, not the plan in effect', async () => {
+    const { service, userRepo } = setup();
+
+    userRepo.findPaymentHistory.mockResolvedValue(PAYMENTS);
+    userRepo.findActiveSubscription.mockResolvedValue({
+      ...SUBSCRIPTION,
+      pending_plan_id: 'plan-free',
+    });
+    userRepo.findCurrentPeriod.mockResolvedValue(CURRENT_PERIOD);
+    userRepo.findPlanById.mockResolvedValue({
+      plan_id: 'plan-free',
+      plan_name: 'Free',
+      price_per_month: '0.00',
+    });
+
+    const result = await service.getPaymentHistory(USER_ID);
+
+    expect(userRepo.findPlanById).toHaveBeenCalledWith('plan-free');
+    expect(result.upcoming).toStrictEqual({
+      due_on: '2026-08-15',
+      amount: '0.00',
+      plan_name: 'Free',
+    });
+    expect(result.payments).toStrictEqual(PAYMENTS);
   });
 });
