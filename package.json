@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "docker compose up -d --wait && npm run seed:usage",
     "start": "node --env-file-if-exists=.env ./src/www.js",
     "dev": "node --watch --env-file-if-exists=.env ./src/www.js",
     "seed:usage": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js",
