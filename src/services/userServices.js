@@ -4,7 +4,7 @@ import {
   AlreadyOnPlanError,
   AlreadyScheduledPlanError,
 } from '../errors/userErrors.js';
-import { USAGE_PAGE_SIZE } from '../repositories/userRepos.js';
+import { PAGE_SIZE } from '../repositories/userRepos.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -18,13 +18,11 @@ const daysBetween = (from, to) => (utcMidnight(to) - utcMidnight(from)) / MS_PER
 const prorateUpgrade = (currentPrice, newPrice, { period_start, next_bill_due }) => {
   const difference = Number(newPrice) - Number(currentPrice);
 
-  // Nothing was paid for a free period, so there is no part-month to credit against.
   if (Number(currentPrice) === 0) return difference.toFixed(2);
 
   const totalDays = daysBetween(period_start, next_bill_due);
   const daysRemaining = daysBetween(new Date(), next_bill_due);
 
-  // Past the due date the period would have rolled over, so a full period is owed.
   const billableDays = daysRemaining <= 0 ? totalDays : daysRemaining;
 
   return (difference * billableDays / totalDays).toFixed(2);
@@ -59,7 +57,7 @@ export const createUserServices = (userRepo) => ({
 
     if (Number(newPlan.price_per_month) <= Number(currentPlan.price_per_month)) {
       await userRepo.schedulePlanChange(userId, newPlan.plan_id);
-      return { charged: false, plan_name: planName };
+      return { charged: false, paymentId: null };
     }
 
     assertCard(newPlan.price_per_month, cardLast4);
@@ -110,15 +108,15 @@ export const createUserServices = (userRepo) => ({
   getUsageLogPage: async (userId, { api, from, to, cursor }) => {
     const rows = await userRepo.findUsageLogPage(userId, { api, from, to }, cursor);
 
-    const calls = rows.slice(0, USAGE_PAGE_SIZE);
-    const logContinues = rows.length > USAGE_PAGE_SIZE;
-    const last = logContinues ? calls.at(-1) : null;
+    const calls = rows.slice(0, PAGE_SIZE);
+
+    if (rows.length <= PAGE_SIZE) return { calls, next_cursor: null };
+
+    const last = calls.at(-1);
 
     return {
       calls,
-      next_cursor: last
-        ? { at: new Date(last.used_at).toISOString(), id: last.api_usage_id }
-        : null,
+      next_cursor: { at: new Date(last.used_at).toISOString(), id: last.api_usage_id },
     };
   },
 
@@ -137,10 +135,13 @@ export const createUserServices = (userRepo) => ({
       userRepo.findPlanById(subscription.pending_plan_id ?? subscription.plan_id),
     ]);
 
-    const upcoming = period && plan
-      ? { due_on: period.next_bill_due, amount: plan.price_per_month, plan_name: plan.plan_name }
-      : null;
-
-    return { payments, upcoming };
+    return {
+      payments,
+      upcoming: {
+        due_on: period.next_bill_due,
+        amount: plan.price_per_month,
+        plan_name: plan.plan_name,
+      },
+    };
   },
 });

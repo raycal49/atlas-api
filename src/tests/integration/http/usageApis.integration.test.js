@@ -8,7 +8,7 @@ import { createTestApp } from '../testApp.js';
 const app = createTestApp();
 
 describe('GET /usage/apis', () => {
-  it('returns every api product under an apis key', async () => {
+  it('returns every api', async () => {
     const user = await makeUser();
     const routing = await makeApiProduct({ api_name: 'routing' });
     const geocode = await makeApiProduct({ api_name: 'geocode' });

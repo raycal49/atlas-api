@@ -13,7 +13,7 @@ const FIELDS = ["card_number"];
 
 let selectedPlan = null;
 let checkout = null;
-let currentPlan = null;   // GET /data payload for the signed-in user, or null
+let currentPlan = null;
 
 const isFree = (plan) => Number(plan.price_per_month) === 0;
 
@@ -31,12 +31,9 @@ const isCurrent = (plan) => currentPlan !== null && !isPlanChange(plan);
 const startOfNextCycle = () =>
     currentPlan?.bill_due ? monthDay(currentPlan.bill_due) : null;
 
-// Mirrors prorateUpgrade in src/services/userServices.js — keep both in step.
-// The server is what actually charges; this is only the quote on the card.
 const proratedUpgrade = (newPrice) => {
     const difference = Number(newPrice) - Number(currentPlan.price);
 
-    // Nothing was paid for a free period, so there is no part-month to credit against.
     if (Number(currentPlan.price) === 0) return difference.toFixed(2);
 
     if (!currentPlan.bill_start || !currentPlan.bill_due) return null;
@@ -44,7 +41,6 @@ const proratedUpgrade = (newPrice) => {
     const totalDays = daysBetween(currentPlan.bill_start, currentPlan.bill_due);
     const daysRemaining = daysBetween(new Date(), currentPlan.bill_due);
 
-    // Past the due date the period would have rolled over, so a full period is owed.
     const billableDays = daysRemaining <= 0 ? totalDays : daysRemaining;
 
     return (difference * billableDays / totalDays).toFixed(2);
@@ -168,7 +164,7 @@ async function loadCurrentPlan() {
         currentPlan = data?.dashboardData ?? null;
     } catch (e) {
         console.error(e);
-        currentPlan = null;   // fall back to plain sticker pricing
+        currentPlan = null;
     }
 }
 
@@ -192,20 +188,21 @@ async function payForPlan() {
         const fields = { plan_name: selectedPlan.plan_name };
         if (checkout.needsCard) fields.card_number = cardInput.value;
 
-        const { ok, status, body } = await postForm("/subscriptions", fields);
+        const {status, body } = await postForm("/subscriptions", fields);
 
-        if (ok) {
-            if (body?.scheduled) {
-                const starts = startOfNextCycle();
+        const {charged, paymentId} = body.subscription ?? {};
 
-                showFormNotice(starts
-                    ? `You'll move to ${body.scheduled} on ${starts}.`
-                    : `You'll move to ${body.scheduled} at the start of your next billing cycle.`);
-                return;
-            }
-
-            window.location.href = "/dashboard?paid=" + body.paymentId;
+        if (charged == true) {
+            window.location.href = "/dashboard?paid=" + paymentId;
             return;
+        }
+        else if (charged === false) {
+            const starts = startOfNextCycle();
+
+            showFormNotice(starts
+                ? `You'll move to ${selectedPlan.plan_name} on ${starts}.`
+                : `You'll move to ${selectedPlan.plan_name} at the start of your next billing cycle.`);
+                return;
         }
 
         if (status === 401) {

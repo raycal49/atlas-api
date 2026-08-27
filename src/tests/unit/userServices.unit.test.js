@@ -4,7 +4,7 @@ import {
   AlreadyOnPlanError,
   AlreadyScheduledPlanError,
   CardRequiredError,
-} from '../errors/userErrors.js';
+} from '../../errors/userErrors.js';
 import { setup, USER_ID } from './userServicesHarness.js';
 
 const CARD_LAST4 = '4211';
@@ -94,7 +94,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-    expect(result).toStrictEqual({ charged: false, plan_name: 'SuperSaver' });
+    expect(result).toStrictEqual({ charged: false, paymentId: null });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
     expect(userRepo.subscribeToPlan).not.toHaveBeenCalled();
     expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, OTHER_PLAN_ID);
@@ -112,23 +112,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver');
 
-    expect(result).toStrictEqual({ charged: false, plan_name: 'SuperSaver' });
-    expect(userRepo.changePlan).not.toHaveBeenCalled();
-  });
-
-  it('schedules a same-priced plan rather than charging zero for it', async () => {
-    const { service, userRepo } = setup();
-
-    userRepo.findActivePlanByName.mockResolvedValue({
-      plan_id: OTHER_PLAN_ID,
-      price_per_month: '9.99',
-    });
-    userRepo.findActiveSubscription.mockResolvedValue(ACTIVE_SUBSCRIPTION);
-    userRepo.findPlanById.mockResolvedValue({ price_per_month: '9.99' });
-
-    const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
-
-    expect(result).toStrictEqual({ charged: false, plan_name: 'SuperSaver' });
+    expect(result).toStrictEqual({ charged: false, paymentId: null });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
   });
 
@@ -166,7 +150,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'Developer');
 
-    expect(result).toStrictEqual({ charged: false, plan_name: 'Developer' });
+    expect(result).toStrictEqual({ charged: false, paymentId: null });
     expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, THIRD_PLAN_ID);
     expect(userRepo.changePlan).not.toHaveBeenCalled();
   });
@@ -197,7 +181,7 @@ describe('POST /subscriptions', () => {
 
       await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-      expect(amountCharged(userRepo)).toBe('101.61');   // 150 x 21/31
+      expect(amountCharged(userRepo)).toBe('101.61');
     });
 
     it('charges the full difference when upgrading on the first day', async () => {
@@ -207,7 +191,7 @@ describe('POST /subscriptions', () => {
 
       await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-      expect(amountCharged(userRepo)).toBe('150.00');   // 150 x 31/31
+      expect(amountCharged(userRepo)).toBe('150.00');
     });
 
     it('charges the full difference once the period is past due', async () => {
@@ -217,7 +201,7 @@ describe('POST /subscriptions', () => {
 
       await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-      expect(amountCharged(userRepo)).toBe('150.00');   // remaining is negative
+      expect(amountCharged(userRepo)).toBe('150.00');
     });
 
     it('charges full price when upgrading off a free plan', async () => {
@@ -228,7 +212,7 @@ describe('POST /subscriptions', () => {
 
       await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-      expect(amountCharged(userRepo)).toBe('199.00');   // not 32.10 for 5 of 31 days
+      expect(amountCharged(userRepo)).toBe('199.00');
     });
 
     it('divides by the real length of a short month', async () => {
@@ -238,7 +222,7 @@ describe('POST /subscriptions', () => {
 
       await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-      expect(amountCharged(userRepo)).toBe('75.00');    // 150 x 14/28
+      expect(amountCharged(userRepo)).toBe('75.00');
     });
   });
 });

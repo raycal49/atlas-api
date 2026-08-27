@@ -5,7 +5,7 @@ import {
 
 const UNIQUE_VIOLATION = '23505';
 
-export const USAGE_PAGE_SIZE = 25;
+export const PAGE_SIZE = 25;
 
 const insertSubscriptionWithPayment = async (sql, userId, planId, amount, cardLast4) => {
   const [sub] = await sql`
@@ -109,7 +109,7 @@ export const createUserRepository = (sql) => ({
       WHERE ${filters}
       ${keyset}
       ORDER BY u.used_at DESC, u.api_usage_id DESC
-      LIMIT ${USAGE_PAGE_SIZE + 1}`;
+      LIMIT ${PAGE_SIZE + 1}`;
   },
 
   findAllApiProducts: async () => {

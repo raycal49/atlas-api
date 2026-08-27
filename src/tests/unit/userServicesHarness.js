@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { createUserServices } from '../services/userServices.js';
+import { createUserServices } from '../../services/userServices.js';
 
 export const USER_ID = '79c7d0bd4b6a';
 

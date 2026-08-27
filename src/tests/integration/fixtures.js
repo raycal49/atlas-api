@@ -7,6 +7,10 @@ const next = () => (sequence += 1);
 export const DEFAULT_PERIOD_START = '2026-03-15';
 export const DEFAULT_USED_AT = '2026-03-15T12:00:00Z';
 
+// DEFAULT_USED_AT plus `index` seconds, for rows that must not share an instant
+export const secondsApart = (index) =>
+  new Date(Date.UTC(2026, 2, 15, 12, 0, index)).toISOString();
+
 export const makeUser = async (overrides = {}) => {
   const n = next();
 
