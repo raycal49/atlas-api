@@ -46,11 +46,3 @@ export class DuplicatePeriodPaymentError extends Error {
     this.statusCode = 409;
   }
 }
-
-export class SubscriptionNotFoundError extends Error {
-  constructor(options) {
-    super("No active subscription", options);
-    this.name = "SubscriptionNotFound";
-    this.statusCode = 404;
-  }
-}

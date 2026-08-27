@@ -13,33 +13,33 @@ const FIELDS = ["card_number"];
 
 let selectedPlan = null;
 let checkout = null;
-let currentPlan = null;
+let currentSubscription = null;
 
 const isFree = (plan) => Number(plan.price_per_month) === 0;
 
 const isPlanChange = (plan) =>
-    currentPlan !== null && plan.plan_name !== currentPlan.plan;
+    currentSubscription !== null && plan.plan_name !== currentSubscription.plan;
 
 const isDowngrade = (plan) =>
-    isPlanChange(plan) && Number(plan.price_per_month) <= Number(currentPlan.price);
+    isPlanChange(plan) && Number(plan.price_per_month) <= Number(currentSubscription.price);
 
 const isUpgrade = (plan) =>
-    isPlanChange(plan) && Number(plan.price_per_month) > Number(currentPlan.price);
+    isPlanChange(plan) && Number(plan.price_per_month) > Number(currentSubscription.price);
 
-const isCurrent = (plan) => currentPlan !== null && !isPlanChange(plan);
+const isCurrent = (plan) => currentSubscription !== null && !isPlanChange(plan);
 
 const startOfNextCycle = () =>
-    currentPlan?.bill_due ? monthDay(currentPlan.bill_due) : null;
+    currentSubscription?.bill_due ? monthDay(currentSubscription.bill_due) : null;
 
-const proratedUpgrade = (newPrice) => {
-    const difference = Number(newPrice) - Number(currentPlan.price);
+const previewProratedUpgrade = (newPrice) => {
+    const difference = Number(newPrice) - Number(currentSubscription.price);
 
-    if (Number(currentPlan.price) === 0) return difference.toFixed(2);
+    if (Number(currentSubscription.price) === 0) return difference.toFixed(2);
 
-    if (!currentPlan.bill_start || !currentPlan.bill_due) return null;
+    if (!currentSubscription.bill_start || !currentSubscription.bill_due) return null;
 
-    const totalDays = daysBetween(currentPlan.bill_start, currentPlan.bill_due);
-    const daysRemaining = daysBetween(new Date(), currentPlan.bill_due);
+    const totalDays = daysBetween(currentSubscription.bill_start, currentSubscription.bill_due);
+    const daysRemaining = daysBetween(new Date(), currentSubscription.bill_due);
 
     const billableDays = daysRemaining <= 0 ? totalDays : daysRemaining;
 
@@ -48,7 +48,7 @@ const proratedUpgrade = (newPrice) => {
 
 const checkoutFor = (plan) => {
     const starts = startOfNextCycle();
-    const upgradeAmount = isUpgrade(plan) ? proratedUpgrade(plan.price_per_month) : null;
+    const upgradeAmount = isUpgrade(plan) ? previewProratedUpgrade(plan.price_per_month) : null;
 
     if (isDowngrade(plan))
         return {
@@ -161,10 +161,10 @@ async function loadCurrentPlan() {
 
     try {
         const data = await getJson("/data");
-        currentPlan = data?.dashboardData ?? null;
+        currentSubscription = data?.dashboard ?? null;
     } catch (e) {
         console.error(e);
-        currentPlan = null;
+        currentSubscription = null;
     }
 }
 
@@ -190,10 +190,10 @@ async function payForPlan() {
 
         const {status, body } = await postForm("/subscriptions", fields);
 
-        const {charged, paymentId} = body.subscription ?? {};
+        const {charged, payment_id} = body.subscription ?? {};
 
         if (charged == true) {
-            window.location.href = "/dashboard?paid=" + paymentId;
+            window.location.href = "/dashboard?paid=" + payment_id;
             return;
         }
         else if (charged === false) {

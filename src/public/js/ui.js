@@ -45,6 +45,8 @@ export const formatCard = (last4) =>
 export const monthDay = (value) =>
   new Date(value).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" });
 
+// Twin of the date helpers in src/services/userService.js (server and browser
+// cannot share a module here). Edit both together.
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const utcMidnight = (value) => {

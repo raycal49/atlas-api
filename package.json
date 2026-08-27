@@ -1,15 +1,14 @@
 {
-  "name": "geoApp",
+  "name": "atlas-api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "setup": "docker compose up -d --wait && npm run seed:usage",
-    "start": "node --env-file-if-exists=.env ./src/www.js",
-    "dev": "node --watch --env-file-if-exists=.env ./src/www.js",
+    "start": "node --env-file-if-exists=.env ./src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env ./src/server.js",
     "seed:usage": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js",
     "seed:usage:reset": "node --env-file-if-exists=.env ./src/scripts/seedUsage.js --reset",
-    "assets:map": "node ./src/scripts/generateHeroMap.js",
 
     "test": "vitest --config vitest.unit.config.js",
     "test:run": "vitest run --config vitest.unit.config.js",

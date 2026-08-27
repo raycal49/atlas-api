@@ -1,4 +1,4 @@
-import { createDb } from '../../database/db.js';
+import { createDatabase } from '../../config/database.js';
 
 const assertSafeTestDatabase = () => {
   const rawUrl = process.env.DATABASE_URL;
@@ -39,7 +39,7 @@ const assertSafeTestDatabase = () => {
 
 assertSafeTestDatabase();
 
-export const testSql = createDb();
+export const testSql = createDatabase();
 
 export const resetTestDatabase = async () => {
   await testSql`

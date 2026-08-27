@@ -1,6 +1,6 @@
 import { describe, expect, it, } from 'vitest';
-import { AlreadySubscribedError } from '../../errors/userErrors.js';
-import { createUserRepository } from '../../repositories/userRepos.js';
+import { AlreadySubscribedError } from '../../errors/subscriptionErrors.js';
+import { createUserRepository } from '../../repositories/userRepository.js';
 import { makePlan, makeUser, } from './fixtures.js';
 import { testSql } from './testDb.js';
 

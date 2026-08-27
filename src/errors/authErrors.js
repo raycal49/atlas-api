@@ -1,23 +1,16 @@
-export class InvalidCredentialError extends Error {
+export class InvalidCredentialsError extends Error {
   constructor(options) {
     super("Invalid username and/or password", options);
-    this.name = "InvalidCredential";
+    this.name = "InvalidCredentials";
     this.statusCode = 401;
   }
 }
 
-export class ExistingAccountError extends Error {
+export class UsernameTakenError extends Error {
   constructor(options) {
     super("Account with this username already exists", options);
     this.name = "UsernameTaken";
     this.statusCode = 409;
-  }
-}
-
-export class ValidationError extends Error {
-  constructor(fields, options) {
-    super("A field or fields contain invalid input", options);
-    this.name = "ValidationError";
   }
 }
 

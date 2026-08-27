@@ -1,4 +1,4 @@
-export const listValidationErrors = (issues) => {
+export const groupValidationErrors = (issues) => {
   const validationErrors = {};
   for (const issue of issues) {
     const field = issue.path.join('.') || 'root';
@@ -14,7 +14,7 @@ export const validateBody = (schema) => (req, res, next) => {
     return res.status(400).json({
       status: 'fail',
       message: 'Validation failed',
-      errors: listValidationErrors(result.error.issues),
+      errors: groupValidationErrors(result.error.issues),
     });
   }
 
@@ -29,7 +29,7 @@ export const validateQuery = (schema) => (req, res, next) => {
     return res.status(400).json({
       status: 'fail',
       message: 'Validation failed',
-      errors: listValidationErrors(result.error.issues),
+      errors: groupValidationErrors(result.error.issues),
     });
   }
 

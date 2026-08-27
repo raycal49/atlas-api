@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'node',
 
     include: [
-      'src/tests/**/*.test.js',
+      'src/tests/unit/**/*.test.js',
     ],
 
     exclude: [

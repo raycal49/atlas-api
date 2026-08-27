@@ -1,8 +1,8 @@
 // populate db                  "npm run seed:usage"
 // reset db then populate db    "npm run seed:usage:reset"
 
-import { createDb } from '../database/db.js';
-import { hashPassword } from '../services/argonServices.js';
+import { createDatabase } from '../config/database.js';
+import { hashPassword } from '../services/passwordService.js';
 
 const API_PRODUCTS = [
   'Geocoding',
@@ -127,16 +127,10 @@ const seedPlanLimits = async (sql, planIds, productIds) => {
   return rows.length;
 };
 
-const ensureUsageIndex = (sql) => sql`
-  CREATE INDEX IF NOT EXISTS api_usage_user_used_at_idx
-    ON api_usage (user_id, used_at DESC)`;
-
 const seedCatalog = async (sql) => {
   const productIds = await seedApiProducts(sql);
   const planIds = await seedPlans(sql);
   const limitCount = await seedPlanLimits(sql, planIds, productIds);
-
-  await ensureUsageIndex(sql);
 
   console.log(
     `Catalog: ${API_PRODUCTS.length} API products, ${PLANS.length} plans, ` +
@@ -166,13 +160,13 @@ const seedDemoAccount = async (sql) => {
   const [plan] = await sql`
     SELECT plan_id, price_per_month FROM plans WHERE plan_name = ${DEMO_PLAN}`;
 
-  await sql.begin(async (sql) => {
-    const [sub] = await sql`
+  await sql.begin(async (tx) => {
+    const [sub] = await tx`
       INSERT INTO subscriptions (user_id, plan_id)
       VALUES (${user.user_id}, ${plan.plan_id})
       RETURNING subscription_id, started_at`;
 
-    await sql`
+    await tx`
       INSERT INTO payment_history (subscription_id, amount_paid, card_last4, period_start)
       VALUES (${sub.subscription_id}, ${plan.price_per_month}, '4242',
               (${sub.started_at} AT TIME ZONE 'UTC')::date)`;
@@ -192,17 +186,17 @@ const backdateFreshPeriods = async (sql) => {
 
   const ids = fresh.map((row) => row.subscription_id);
 
-  await sql.begin(async (sql) => {
-    await sql`
+  await sql.begin(async (tx) => {
+    await tx`
       UPDATE subscriptions
          SET started_at = started_at - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
-       WHERE subscription_id IN ${sql(ids)}`;
+       WHERE subscription_id IN ${tx(ids)}`;
 
-    await sql`
+    await tx`
       UPDATE payment_history
          SET period_start = period_start - ${DEMO_DAYS_ELAPSED}::int,
              paid_at      = paid_at      - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
-       WHERE subscription_id IN ${sql(ids)} AND period_start = CURRENT_DATE`;
+       WHERE subscription_id IN ${tx(ids)} AND period_start = CURRENT_DATE`;
   });
 
   return fresh.length;
@@ -284,7 +278,7 @@ const seedUsage = async (sql, reset) => {
   console.log(`Usage: inserted ${inserted} rows across ${targets.length} user/API pairs.`);
 };
 
-const sql = createDb();
+const sql = createDatabase();
 
 try {
   await seedCatalog(sql);

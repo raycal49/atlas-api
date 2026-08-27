@@ -29,7 +29,7 @@ describe('POST /subscriptions', () => {
     const [payment] = await testSql`
       SELECT card_last4
       FROM payment_history
-      WHERE payment_id = ${response.body.subscription.paymentId}`;
+      WHERE payment_id = ${response.body.subscription.payment_id}`;
 
     expect(payment.card_last4).toBe(CARD.LAST_FOUR);
   });
@@ -59,7 +59,7 @@ describe('POST /subscriptions', () => {
     const [payment] = await testSql`
       SELECT amount_paid, card_last4
       FROM payment_history
-      WHERE payment_id = ${response.body.subscription.paymentId}`;
+      WHERE payment_id = ${response.body.subscription.payment_id}`;
 
     expect(payment.amount_paid).toBe('0');
     expect(payment.card_last4).toBeNull();

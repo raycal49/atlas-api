@@ -20,3 +20,4 @@ export const hintCookieOptions = { ...cookieOptions, httpOnly: false };
 export const clearHintCookieOptions = { ...clearCookieOptions, httpOnly: false };
 
 export const SIGNED_IN_COOKIE = 'signed_in';
+export const TOKEN_COOKIE = 'token';

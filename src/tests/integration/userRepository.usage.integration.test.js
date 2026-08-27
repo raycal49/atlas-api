@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createUserRepository, PAGE_SIZE } from '../../repositories/userRepos.js';
+import { createUserRepository, PAGE_SIZE } from '../../repositories/userRepository.js';
 import {
   makeApiProduct,
   makePlan,
@@ -93,7 +93,7 @@ describe('findUsageLogPage', () => {
 
     const firstBatch = await userRepository.findUsageLogPage(
       user.user_id,
-      { api: apiProduct.api_product_id },
+      { api_product_id: apiProduct.api_product_id },
       null,
     );
 
@@ -101,7 +101,7 @@ describe('findUsageLogPage', () => {
     
     const secondBatch = await userRepository.findUsageLogPage(
       user.user_id,
-      { api: apiProduct.api_product_id },
+      { api_product_id: apiProduct.api_product_id },
       cursorFrom(firstPage.at(-1)),
     );
 
@@ -143,7 +143,7 @@ const makeMeteredPlan = async (apiProductIds, monthlyLimit = 1000) => {
   return plan;
 };
 
-describe('getPeriodApiCalls', () => {
+describe('findPlanLimitsWithUsage', () => {
   it('returns a calls for all api products user can access', async () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
@@ -159,7 +159,7 @@ describe('getPeriodApiCalls', () => {
       api_product_id: apiProduct.api_product_id,
     });
 
-    const calls = await userRepository.getPeriodApiCalls(
+    const calls = await userRepository.findPlanLimitsWithUsage(
       user.user_id,
       PERIOD_START,
       plan.plan_id,
@@ -179,7 +179,7 @@ describe('getPeriodApiCalls', () => {
       used_at: '2026-03-01T00:00:00Z',
     });
 
-    const [row] = await userRepository.getPeriodApiCalls(
+    const [row] = await userRepository.findPlanLimitsWithUsage(
       user.user_id,
       PERIOD_START,
       plan.plan_id,

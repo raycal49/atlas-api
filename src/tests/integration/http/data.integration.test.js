@@ -78,7 +78,7 @@ describe('GET /data', () => {
       .set('Cookie', await tokenCookieFor(user.user_id))
       .expect(200);
 
-    expect(response.body).toEqual({ dashboardData: null });
+    expect(response.body).toEqual({ dashboard: null });
   });
 
   it('composes the plan, the billing period and the api calls', async () => {
@@ -96,7 +96,7 @@ describe('GET /data', () => {
       .set('Cookie', await tokenCookieFor(user.user_id))
       .expect(200);
 
-    expect(response.body.dashboardData).toEqual({
+    expect(response.body.dashboard).toEqual({
       plan: PLAN.NAME,
       pending_plan: null,
       plan_start: BILL_START,
@@ -134,7 +134,7 @@ describe('GET /data', () => {
       .set('Cookie', await tokenCookieFor(user.user_id))
       .expect(200);
 
-    const { plan, price, pending_plan } = response.body.dashboardData;
+    const { plan, price, pending_plan } = response.body.dashboard;
 
     expect({ plan, price, pending_plan }).toEqual({
       plan: PLAN.NAME,
@@ -168,6 +168,6 @@ describe('GET /data', () => {
       .set('Accept', 'application/json')
       .expect(200);
 
-    expect(response.body.dashboardData.plan).toBe(PLAN.NAME);
+    expect(response.body.dashboard.plan).toBe(PLAN.NAME);
   });
 });

@@ -58,7 +58,7 @@ fromInput.addEventListener("input", syncDateBounds);
 toInput.addEventListener("input", syncDateBounds);
 
 const restoreFilters = () => {
-    apiSelect.value = params.get("api") ?? "";
+    apiSelect.value = params.get("api_product_id") ?? "";
     fromInput.value = params.get("from") ?? "";
     toInput.value = params.get("to") ?? "";
     syncDateBounds();

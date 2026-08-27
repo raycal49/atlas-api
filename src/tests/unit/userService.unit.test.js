@@ -4,8 +4,8 @@ import {
   AlreadyOnPlanError,
   AlreadyScheduledPlanError,
   CardRequiredError,
-} from '../../errors/userErrors.js';
-import { setup, USER_ID } from './userServicesHarness.js';
+} from '../../errors/subscriptionErrors.js';
+import { setup, USER_ID } from './userServiceHarness.js';
 
 const CARD_LAST4 = '4211';
 
@@ -37,7 +37,7 @@ const arrangeUpgrade = (userRepo, period = PERIOD) => {
 
 const amountCharged = (userRepo) => userRepo.changePlan.mock.calls[0][2];
 
-describe('POST /subscriptions', () => {
+describe('userService.selectPlan', () => {
   it('rejects a plan the user is already on', async () => {
     const { service, userRepo } = setup();
 
@@ -66,7 +66,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-    expect(result).toStrictEqual({ charged: true, paymentId: PAYMENT_ID });
+    expect(result).toStrictEqual({ charged: true, payment_id: PAYMENT_ID });
   });
 
   it('rejects a paid plan when no card is supplied', async () => {
@@ -94,7 +94,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-    expect(result).toStrictEqual({ charged: false, paymentId: null });
+    expect(result).toStrictEqual({ charged: false, payment_id: null });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
     expect(userRepo.subscribeToPlan).not.toHaveBeenCalled();
     expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, OTHER_PLAN_ID);
@@ -112,7 +112,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver');
 
-    expect(result).toStrictEqual({ charged: false, paymentId: null });
+    expect(result).toStrictEqual({ charged: false, payment_id: null });
     expect(userRepo.changePlan).not.toHaveBeenCalled();
   });
 
@@ -150,7 +150,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'Developer');
 
-    expect(result).toStrictEqual({ charged: false, paymentId: null });
+    expect(result).toStrictEqual({ charged: false, payment_id: null });
     expect(userRepo.schedulePlanChange).toHaveBeenCalledWith(USER_ID, THIRD_PLAN_ID);
     expect(userRepo.changePlan).not.toHaveBeenCalled();
   });
@@ -166,7 +166,7 @@ describe('POST /subscriptions', () => {
 
     const result = await service.selectPlan(USER_ID, 'SuperSaver', CARD_LAST4);
 
-    expect(result).toStrictEqual({ charged: true, paymentId: PAYMENT_ID });
+    expect(result).toStrictEqual({ charged: true, payment_id: PAYMENT_ID });
     expect(userRepo.schedulePlanChange).not.toHaveBeenCalled();
   });
 

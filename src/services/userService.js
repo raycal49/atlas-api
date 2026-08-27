@@ -3,9 +3,11 @@ import {
   CardRequiredError,
   AlreadyOnPlanError,
   AlreadyScheduledPlanError,
-} from '../errors/userErrors.js';
-import { PAGE_SIZE } from '../repositories/userRepos.js';
+} from '../errors/subscriptionErrors.js';
+import { PAGE_SIZE } from '../repositories/userRepository.js';
 
+// Twin of the date helpers in src/public/js/ui.js (server and browser cannot
+// share a module here). Edit both together.
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const utcMidnight = (value) => {
@@ -32,7 +34,7 @@ const assertCard = (price, cardLast4) => {
   if (Number(price) > 0 && !cardLast4) throw new CardRequiredError();
 };
 
-export const createUserServices = (userRepo) => ({
+export const createUserService = (userRepo) => ({
   selectPlan: async (userId, planName, cardLast4) => {
     const newPlan = await userRepo.findActivePlanByName(planName);
     if (!newPlan) throw new InvalidPlanError(planName);
@@ -44,7 +46,7 @@ export const createUserServices = (userRepo) => ({
 
       const paymentId = await userRepo.subscribeToPlan(
         userId, newPlan.plan_id, newPlan.price_per_month, cardLast4);
-      return { charged: true, paymentId };
+      return { charged: true, payment_id: paymentId };
     }
 
     if (current.plan_id === newPlan.plan_id)
@@ -57,7 +59,7 @@ export const createUserServices = (userRepo) => ({
 
     if (Number(newPlan.price_per_month) <= Number(currentPlan.price_per_month)) {
       await userRepo.schedulePlanChange(userId, newPlan.plan_id);
-      return { charged: false, paymentId: null };
+      return { charged: false, payment_id: null };
     }
 
     assertCard(newPlan.price_per_month, cardLast4);
@@ -67,14 +69,10 @@ export const createUserServices = (userRepo) => ({
       currentPlan.price_per_month, newPlan.price_per_month, period);
 
     const paymentId = await userRepo.changePlan(userId, newPlan.plan_id, amount, cardLast4);
-    return { charged: true, paymentId };
+    return { charged: true, payment_id: paymentId };
   },
 
-  getCurrentSubscription: async (userId) => {
-    return await userRepo.findActiveSubscription(userId) ?? null;
-  },
-
-  getUserData: async (userId) => {
+  getDashboard: async (userId) => {
     const subscription = await userRepo.findActiveSubscription(userId);
     if (!subscription) return null;
 
@@ -86,7 +84,7 @@ export const createUserServices = (userRepo) => ({
 
     const currentPeriod = await userRepo.findCurrentPeriod(subscription.subscription_id);
 
-    const apiData = await userRepo.getPeriodApiCalls(userId, currentPeriod.period_start, subscription.plan_id); // NECESSARY ITEM 3
+    const apiData = await userRepo.findPlanLimitsWithUsage(userId, currentPeriod.period_start, subscription.plan_id); // NECESSARY ITEM 3
     
     const data = {
       plan: subscribedPlan.plan_name,
@@ -105,8 +103,8 @@ export const createUserServices = (userRepo) => ({
     return await userRepo.findAllActivePlans();
   },
 
-  getUsageLogPage: async (userId, { api, from, to, cursor }) => {
-    const rows = await userRepo.findUsageLogPage(userId, { api, from, to }, cursor);
+  getUsageLogPage: async (userId, { api_product_id, from, to, cursor }) => {
+    const rows = await userRepo.findUsageLogPage(userId, { api_product_id, from, to }, cursor);
 
     const calls = rows.slice(0, PAGE_SIZE);
 

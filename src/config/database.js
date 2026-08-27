@@ -30,7 +30,7 @@ const getSslOption = () => {
   }
 };
 
-export const createDb = (
+export const createDatabase = (
   connectionString = process.env.DATABASE_URL,
 ) => {
   if (!connectionString) {

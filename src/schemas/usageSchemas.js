@@ -5,7 +5,7 @@ const blankable = (schema) =>
 
 export const usageLogQuerySchema = z
   .object({
-    api: blankable(z.uuid('API must be a valid id')),
+    api_product_id: blankable(z.uuid('API must be a valid id')),
 
     from: blankable(z.iso.datetime('From must be an ISO datetime')),
     to: blankable(z.iso.datetime('To must be an ISO datetime')),

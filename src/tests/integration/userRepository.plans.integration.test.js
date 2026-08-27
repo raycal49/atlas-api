@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createUserRepository } from '../../repositories/userRepos.js';
+import { createUserRepository } from '../../repositories/userRepository.js';
 import { makePlan } from './fixtures.js';
 import { testSql } from './testDb.js';
 

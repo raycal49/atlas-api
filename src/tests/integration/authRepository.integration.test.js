@@ -4,7 +4,7 @@ import {
   it,
 } from 'vitest';
 
-import { createAuthRepository } from '../../repositories/authRepo.js';
+import { createAuthRepository } from '../../repositories/authRepository.js';
 import { makeUser } from './fixtures.js';
 import { testSql } from './testDb.js';
 

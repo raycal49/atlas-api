@@ -1,27 +1,12 @@
-import argon2 from "argon2";
-import { SignJWT, jwtVerify } from 'jose';
-import { InvalidCredentialError, ExistingAccountError } from '../errors/authErrors.js'
-
-const ARGON2_OPTIONS = {
-  type: argon2.argon2id,
-  memoryCost: 19 * 1024,
-  timeCost: 2,
-  parallelism: 1,
-};
-
-const hashPassword = (password) => {
-  return argon2.hash(password, ARGON2_OPTIONS);
-}
-
-const verifyPassword = (password, passwordHash) => {
-  return argon2.verify(passwordHash, password);
-}
+import { hashPassword, verifyPassword } from './passwordService.js';
+import { SignJWT } from 'jose';
+import { InvalidCredentialsError } from '../errors/authErrors.js'
 
 const createClaims = (id) => {
   return {"id":id};
 }
 
-export const createAuthServices = (authRepository, jwtSecret) => {
+export const createAuthService = (authRepository, jwtSecret) => {
   const createToken = async (claims) => {
     return await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
@@ -43,7 +28,7 @@ export const createAuthServices = (authRepository, jwtSecret) => {
         const userCredentials = await authRepository.findUserCredentials(name) ?? null;
         
         if (!userCredentials) {
-            throw new InvalidCredentialError();
+            throw new InvalidCredentialsError();
         }
 
         const { user_id, hash } = userCredentials;
@@ -51,7 +36,7 @@ export const createAuthServices = (authRepository, jwtSecret) => {
         const queryResult = await verifyPassword(password, hash);
 
         if (!queryResult) {
-          throw new InvalidCredentialError();
+          throw new InvalidCredentialsError();
         }
         
         const signedToken = await issueToken(user_id);
@@ -59,12 +44,6 @@ export const createAuthServices = (authRepository, jwtSecret) => {
         return signedToken;
     },
     addUser: async (user) => {
-        const existingUser = await authRepository.checkUserExists(user.username);
-
-        if (existingUser) {
-          throw new ExistingAccountError();
-        }
-        
         const hash = await hashPassword(user.password);
 
         const {user_id} = await authRepository.insertUser(

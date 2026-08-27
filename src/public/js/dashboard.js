@@ -159,24 +159,24 @@ async function loadDashboard() {
         const body = await getJson("/data");
         if (!body) return;
 
-        const { dashboardData } = body;
+        const { dashboard } = body;
 
-        if (!dashboardData) {
+        if (!dashboard) {
             myPlanSection.classList.add("d-none");
             usageSection.classList.add("d-none");
             pickPlanPrompt.classList.remove("d-none");
             return;
         }
 
-        const apis = (dashboardData.apis ?? []).map(toApiRow);
+        const apis = (dashboard.apis ?? []).map(toApiRow);
 
-        renderKpis(dashboardData, apis);
+        renderKpis(dashboard, apis);
 
         document.querySelector("#planSince").textContent =
-            new Date(dashboardData.plan_start).toLocaleDateString();
+            new Date(dashboard.plan_start).toLocaleDateString();
 
         document.querySelector("#usagePeriod").textContent =
-            periodLabel(dashboardData.bill_start, dashboardData.bill_due);
+            periodLabel(dashboard.bill_start, dashboard.bill_due);
 
         renderUsage(apis);
     } catch (e) {

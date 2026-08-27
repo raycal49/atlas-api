@@ -5,16 +5,16 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ plans });
   },
 
-  getDashboardData: async (req, res) => {
-    const dashboardData = await userServices.getUserData(req.tokenInfo.id);
+  getDashboard: async (req, res) => {
+    const dashboard = await userServices.getDashboard(req.auth.id);
 
-    return res.status(200).json({ dashboardData });
+    return res.status(200).json({ dashboard });
   },
 
-  getUsagePage: async (req, res) => {
+  getUsageLog: async (req, res) => {
     const { cursor_at, cursor_id, ...filters } = req.validatedQuery;
     const cursor = cursor_at ? { at: cursor_at, id: cursor_id } : null;
-    const log = await userServices.getUsageLogPage(req.tokenInfo.id, { ...filters, cursor });
+    const log = await userServices.getUsageLogPage(req.auth.id, { ...filters, cursor });
 
     return res.status(200).json({ log });
   },
@@ -25,8 +25,8 @@ export const createUserController = (userServices) => ({
     return res.status(200).json({ apis });
   },
 
-  getMyPayments: async (req, res) => {
-    const history = await userServices.getPaymentHistory(req.tokenInfo.id);
+  getPaymentHistory: async (req, res) => {
+    const history = await userServices.getPaymentHistory(req.auth.id);
 
     return res.status(200).json({ history });
   },
@@ -34,7 +34,7 @@ export const createUserController = (userServices) => ({
   selectPlan: async (req, res) => {
     const { plan_name, card_number } = req.body;
 
-    const subscription = await userServices.selectPlan(req.tokenInfo.id, plan_name, card_number);
+    const subscription = await userServices.selectPlan(req.auth.id, plan_name, card_number);
 
     if (!subscription.charged)
       return res.status(200).json({ subscription });
