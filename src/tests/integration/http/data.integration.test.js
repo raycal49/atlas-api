@@ -150,13 +150,17 @@ describe('GET /data', () => {
     const agent = request.agent(app);
     await agent.post('/auth/register').send(REGISTRATION).expect(201);
     await agent.post('/subscriptions')
-      .send({ plan_name: PLAN.NAME, card_number: CARD.NUMBER })
+      .send({ plan_name: PLAN.NAME, card_number: '4111111111111111' })
       .expect(201);
 
     const bystander = request.agent(app);
-    await bystander.post('/auth/register').send(OTHER_REGISTRATION).expect(201);
+    await bystander.post('/auth/register').send({
+      username: 'othertester',
+      email: 'other@example.test',
+      password: 'Hunter2pass',
+    }).expect(201);
     await bystander.post('/subscriptions')
-      .send({ plan_name: 'scale', card_number: CARD.NUMBER })
+      .send({ plan_name: 'scale', card_number: '4111111111111111' })
       .expect(201);
 
     const response = await agent
