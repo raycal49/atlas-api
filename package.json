@@ -1,6 +1,12 @@
 {
   "name": "atlas-api",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Geospatial API platform with metered usage, plans, and billing.",
+  "keywords": ["express", "postgresql", "rest-api", "billing"],
+  "license": "MIT",
+  "author": "Raymond Calderon",
+  "repository": { "type": "git", "url": "github:raycal49/atlas-api" },
+  "engines": { "node": ">=22" },
   "private": true,
   "type": "module",
   "scripts": {
