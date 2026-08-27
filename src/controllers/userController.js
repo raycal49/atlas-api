@@ -34,8 +34,11 @@ export const createUserController = (userServices) => ({
   selectPlan: async (req, res) => {
     const { plan_name, card_number } = req.body;
 
-    const paymentId = await userServices.selectPlan(req.tokenInfo.id, plan_name, card_number);
+    const subscription = await userServices.selectPlan(req.tokenInfo.id, plan_name, card_number);
 
-    return res.status(201).json({ paymentId });
+    if (!subscription.charged)
+      return res.status(200).json({ subscription });
+
+    return res.status(201).json({ subscription });
   },
 });

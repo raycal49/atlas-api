@@ -58,8 +58,10 @@
                 <form id="paymentForm" class="card shadow-sm d-none" data-auth="in">
                     <div class="card-body p-4">
                         <h2 class="h4 mb-3">Subscribe to <span id="chosenPlanName"></span></h2>
+                        <p class="text-body-secondary mb-1">Due today: <span id="dueToday"></span></p>
+                        <p class="small text-body-secondary mb-3 d-none" id="effectiveNote"></p>
 
-                        <div class="mb-3">
+                        <div class="mb-3" id="cardField">
                             <label for="card_number" class="form-label">Card number</label>
                             <input type="text" class="form-control" id="card_number" name="card_number"
                                    placeholder="Enter card number" inputmode="numeric" minlength="13" maxlength="19" required />
@@ -67,6 +69,7 @@
                         </div>
 
                         <span class="invisible text-danger small d-block mb-2" id="form-error" aria-live="polite"></span>
+                        <span class="invisible text-success small d-block mb-2" id="form-notice" aria-live="polite"></span>
 
                         <button id="submit-button" type="submit" class="btn btn-primary w-100">Pay</button>
                     </div>

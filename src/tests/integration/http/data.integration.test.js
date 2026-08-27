@@ -27,6 +27,11 @@ const PLAN = {
   PRICE: '9.99',
 };
 
+const PENDING_PLAN = {
+  NAME: 'free',
+  PRICE: '0.00',
+};
+
 const API_NAME = 'geocode';
 const MONTHLY_LIMIT = 1000;
 const CALLS_MADE = 3;
@@ -76,7 +81,7 @@ describe('GET /data', () => {
     expect(response.body).toEqual({ dashboardData: null });
   });
 
-  it('composes the plan, the billing period and the metered calls', async () => {
+  it('composes the plan, the billing period and the api calls', async () => {
     const user = await makeUser();
     const { apiProduct } = await givenSubscribedUser(user.user_id);
 
@@ -93,6 +98,7 @@ describe('GET /data', () => {
 
     expect(response.body.dashboardData).toEqual({
       plan: PLAN.NAME,
+      pending_plan: null,
       plan_start: BILL_START,
       price: PLAN.PRICE,
       bill_start: BILL_START,
@@ -108,33 +114,54 @@ describe('GET /data', () => {
     });
   });
 
-  it('reads the dashboard of the user the registration token names', async () => {
-    const agent = request.agent(app);
+  it('names a scheduled plan change without moving the current plan', async () => {
+    const user = await makeUser();
+    await givenSubscribedUser(user.user_id);
 
-    await agent
-      .post('/auth/register')
-      .send(REGISTRATION)
+    const pendingPlan = await makePlan({
+      plan_name: PENDING_PLAN.NAME,
+      price_per_month: PENDING_PLAN.PRICE,
+    });
+
+    await testSql`
+      UPDATE subscriptions
+      SET pending_plan_id = ${pendingPlan.plan_id}
+      WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
+
+    const response = await request(app)
+      .get('/data')
+      .set('Accept', 'application/json')
+      .set('Cookie', await tokenCookieFor(user.user_id))
+      .expect(200);
+
+    const { plan, price, pending_plan } = response.body.dashboardData;
+
+    expect({ plan, price, pending_plan }).toEqual({
+      plan: PLAN.NAME,
+      price: PLAN.PRICE,
+      pending_plan: PENDING_PLAN.NAME,
+    });
+  });
+
+  it('reads the dashboard of the user the registration token names', async () => {
+    await makePlan({ plan_name: PLAN.NAME, price_per_month: PLAN.PRICE });
+    await makePlan({ plan_name: 'scale', price_per_month: '19.99' });
+
+    const agent = request.agent(app);
+    await agent.post('/auth/register').send(REGISTRATION).expect(201);
+    await agent.post('/subscriptions')
+      .send({ plan_name: PLAN.NAME, card_number: '4111111111111111' })
       .expect(201);
 
-    const [registered] = await testSql`
-      SELECT user_id FROM users WHERE username = ${REGISTRATION.username}`;
-
-    await givenSubscribedUser(registered.user_id);
-
-    const bystander = await makeUser();
-    const otherPlan = await makePlan({
-      plan_name: 'scale',
-      price_per_month: '19.99',
-    });
-    const otherSubscription = await makeSubscription({
-      user_id: bystander.user_id,
-      plan_id: otherPlan.plan_id,
-      started_at: PLAN_START,
-    });
-    await makePayment({
-      subscription_id: otherSubscription.subscription_id,
-      period_start: DEFAULT_PERIOD_START,
-    });
+    const bystander = request.agent(app);
+    await bystander.post('/auth/register').send({
+      username: 'othertester',
+      email: 'other@example.test',
+      password: 'Hunter2pass',
+    }).expect(201);
+    await bystander.post('/subscriptions')
+      .send({ plan_name: 'scale', card_number: '4111111111111111' })
+      .expect(201);
 
     const response = await agent
       .get('/data')

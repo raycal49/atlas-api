@@ -8,7 +8,7 @@ const userRepository = createUserRepository(testSql);
 const utcDay = (value) => new Date(value).toISOString().slice(0, 10);
 
 describe('subscribeToPlan', () => {
-  it('creates an active subscription and bills it once', async () => {
+  it('creates an active subscription and bills it', async () => {
     const user = await makeUser();
     const plan = await makePlan({ price_per_month: '19.99' });
 
@@ -19,61 +19,34 @@ describe('subscribeToPlan', () => {
       '4242',
     );
 
-    const [subscription] = await testSql`
-      SELECT subscription_id, plan_id, ended_at
-      FROM subscriptions
-      WHERE user_id = ${user.user_id}`;
-
-    expect(subscription.plan_id).toBe(plan.plan_id);
-    expect(subscription.ended_at).toBeNull();
-
-    const [payment] = await testSql`
-      SELECT subscription_id, amount_paid, card_last4
-      FROM payment_history
-      WHERE payment_id = ${paymentId}`;
-
-    expect(payment.subscription_id).toBe(subscription.subscription_id);
-    expect(payment.amount_paid).toBe('19.99');
-    expect(payment.card_last4).toBe('4242');
-  });
-
-  it('starts the billing period on the UTC day the subscription began', async () => {
-    const user = await makeUser();
-    const plan = await makePlan();
-
-    const paymentId = await userRepository.subscribeToPlan(
-      user.user_id,
-      plan.plan_id,
-      plan.price_per_month,
-    );
-
     const [row] = await testSql`
-      SELECT s.started_at, p.period_start
+      SELECT s.user_id, s.plan_id, s.ended_at, p.amount_paid, p.card_last4
       FROM payment_history p
       JOIN subscriptions s ON s.subscription_id = p.subscription_id
       WHERE p.payment_id = ${paymentId}`;
 
-    expect(utcDay(row.period_start)).toBe(utcDay(row.started_at));
+    expect(row).toEqual({
+      user_id: user.user_id,
+      plan_id: plan.plan_id,
+      ended_at: null,
+      amount_paid: '19.99',
+      card_last4: '4242',
+    });
   });
 
-  it('rejects a user who already has an active subscription', async () => {
+  it('partial index one_active_subscription_per_user refuses second active subscription', async () => {
     const user = await makeUser();
-    const firstPlan = await makePlan();
-    const secondPlan = await makePlan();
+    const plan = await makePlan({ price_per_month: '19.99' });
 
-    await userRepository.subscribeToPlan(
-      user.user_id,
-      firstPlan.plan_id,
-      firstPlan.price_per_month,
-    );
+    const subscribe = () =>
+      userRepository.subscribeToPlan(user.user_id, plan.plan_id, '19.99');
 
-    await expect(
-      userRepository.subscribeToPlan(
-        user.user_id,
-        secondPlan.plan_id,
-        secondPlan.price_per_month,
-      ),
-    ).rejects.toBeInstanceOf(AlreadySubscribedError);
+    await subscribe();
+
+    const error = await subscribe().catch((err) => err);
+
+    expect(error).toBeInstanceOf(AlreadySubscribedError);
+    expect(error.cause.constraint_name).toBe('one_active_subscription_per_user');
   });
 
   it('leaves no subscription behind when the payment cannot be written', async () => {
@@ -105,72 +78,27 @@ describe('changePlan', () => {
       oldPlan.price_per_month,
     );
 
-    const [original] = await testSql`
-      SELECT subscription_id
-      FROM subscriptions
-      WHERE user_id = ${user.user_id}`;
-
-    const paymentId = await userRepository.changePlan(
+    await userRepository.changePlan(
       user.user_id,
       newPlan.plan_id,
       newPlan.price_per_month,
       '1234',
     );
 
-    const [closed] = await testSql`
-      SELECT ended_at
-      FROM subscriptions
-      WHERE subscription_id = ${original.subscription_id}`;
-
-    expect(closed.ended_at).not.toBeNull();
-
-    const [active] = await testSql`
-      SELECT subscription_id, plan_id
-      FROM subscriptions
-      WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
-
-    expect(active.plan_id).toBe(newPlan.plan_id);
-    expect(active.subscription_id).not.toBe(original.subscription_id);
-
-    const [payment] = await testSql`
-      SELECT subscription_id, amount_paid, card_last4
-      FROM payment_history
-      WHERE payment_id = ${paymentId}`;
-
-    expect(payment.subscription_id).toBe(active.subscription_id);
-    expect(payment.amount_paid).toBe('29.99');
-    expect(payment.card_last4).toBe('1234');
-  });
-
-  it('keeps the old subscription row rather than replacing it', async () => {
-    const user = await makeUser();
-    const oldPlan = await makePlan();
-    const newPlan = await makePlan();
-
-    await userRepository.subscribeToPlan(
-      user.user_id,
-      oldPlan.plan_id,
-      oldPlan.price_per_month,
-    );
-
-    await userRepository.changePlan(
-      user.user_id,
-      newPlan.plan_id,
-      newPlan.price_per_month,
-    );
-
     const subscriptions = await testSql`
-      SELECT ended_at
-      FROM subscriptions
-      WHERE user_id = ${user.user_id}`;
+      SELECT s.plan_id, s.ended_at, p.amount_paid, p.card_last4
+      FROM subscriptions s
+      JOIN payment_history p ON p.subscription_id = s.subscription_id
+      WHERE s.user_id = ${user.user_id}
+      ORDER BY s.started_at`;
 
-    expect(subscriptions).toHaveLength(2);
-    expect(
-      subscriptions.filter((row) => row.ended_at === null),
-    ).toHaveLength(1);
+    expect(subscriptions).toMatchObject([
+      { plan_id: oldPlan.plan_id, ended_at: expect.any(Date), amount_paid: '9.99' },
+      { plan_id: newPlan.plan_id, ended_at: null, amount_paid: '29.99', card_last4: '1234' },
+    ]);
   });
 
-  it('leaves the current subscription active when the payment cannot be written', async () => {
+  it('keeps current plan active when plan change fails', async () => {
     const user = await makeUser();
     const oldPlan = await makePlan();
     const newPlan = await makePlan();
@@ -181,29 +109,79 @@ describe('changePlan', () => {
       oldPlan.price_per_month,
     );
 
-    const [original] = await testSql`
-      SELECT subscription_id
-      FROM subscriptions
-      WHERE user_id = ${user.user_id}`;
+    const noAmountPaid = null;
 
     await expect(
-      userRepository.changePlan(user.user_id, newPlan.plan_id, null),
+      userRepository.changePlan(user.user_id, newPlan.plan_id, noAmountPaid),
     ).rejects.toThrow();
 
     const subscriptions = await testSql`
-      SELECT subscription_id, ended_at
+      SELECT plan_id, ended_at
       FROM subscriptions
       WHERE user_id = ${user.user_id}`;
 
-    expect(subscriptions).toHaveLength(1);
-    expect(subscriptions[0].subscription_id).toBe(original.subscription_id);
-    expect(subscriptions[0].ended_at).toBeNull();
+    expect(subscriptions).toMatchObject([
+      { plan_id: oldPlan.plan_id, ended_at: null },
+    ]);
+  });
+});
+
+describe('schedulePlanChange', () => {
+  it('records the pending plan and leaves the active subscription in place', async () => {
+    const user = await makeUser();
+    const plan = await makePlan();
+    const pendingPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      plan.plan_id,
+      plan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, pendingPlan.plan_id);
+
+    const [subscription] = await testSql`
+      SELECT plan_id, pending_plan_id, ended_at
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}`;
+
+    expect(subscription).toEqual({
+      plan_id: plan.plan_id,
+      pending_plan_id: pendingPlan.plan_id,
+      ended_at: null,
+    });
   });
 
-  it('bills again when the plan changes twice in one day', async () => {
+  it('replaces a pending plan rather than accumulating them', async () => {
+    const user = await makeUser();
+    const plan = await makePlan();
+    const firstPlan = await makePlan();
+    const secondPlan = await makePlan();
+
+    await userRepository.subscribeToPlan(
+      user.user_id,
+      plan.plan_id,
+      plan.price_per_month,
+    );
+
+    await userRepository.schedulePlanChange(user.user_id, firstPlan.plan_id);
+    await userRepository.schedulePlanChange(user.user_id, secondPlan.plan_id);
+
+    const subscriptions = await testSql`
+      SELECT plan_id, pending_plan_id
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}`;
+
+    expect(subscriptions).toEqual([
+      { plan_id: plan.plan_id, pending_plan_id: secondPlan.plan_id },
+    ]);
+  });
+
+  it('schedules against the active subscription and not an ended one', async () => {
     const user = await makeUser();
     const oldPlan = await makePlan();
     const newPlan = await makePlan();
+    const pendingPlan = await makePlan();
 
     await userRepository.subscribeToPlan(
       user.user_id,
@@ -217,15 +195,17 @@ describe('changePlan', () => {
       newPlan.price_per_month,
     );
 
-    const payments = await testSql`
-      SELECT p.period_start
-      FROM payment_history p
-      JOIN subscriptions s ON s.subscription_id = p.subscription_id
-      WHERE s.user_id = ${user.user_id}`;
+    await userRepository.schedulePlanChange(user.user_id, pendingPlan.plan_id);
 
-    expect(payments).toHaveLength(2);
-    expect(utcDay(payments[0].period_start)).toBe(
-      utcDay(payments[1].period_start),
-    );
+    const subscriptions = await testSql`
+      SELECT plan_id, pending_plan_id
+      FROM subscriptions
+      WHERE user_id = ${user.user_id}
+      ORDER BY started_at`;
+
+    expect(subscriptions).toEqual([
+      { plan_id: oldPlan.plan_id, pending_plan_id: null },
+      { plan_id: newPlan.plan_id, pending_plan_id: pendingPlan.plan_id },
+    ]);
   });
 });

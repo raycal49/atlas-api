@@ -2,6 +2,7 @@
 // reset db then populate db    "npm run seed:usage:reset"
 
 import { createDb } from '../database/db.js';
+import { hashPassword } from '../services/argonServices.js';
 
 const API_PRODUCTS = [
   'Geocoding',
@@ -42,33 +43,43 @@ const PLANS = [
 
 const PLAN_LIMITS = {
   'Free': {
-    'Geocoding': 500,
-    'Static Maps': 1_000,
+    'Geocoding': 250,
+    'Static Maps': 500,
   },
   'Developer': {
-    'Geocoding': 5_000,
-    'Reverse Geocoding': 5_000,
-    'Directions': 2_500,
-    'Static Maps': 10_000,
-    'Isochrone': 1_000,
+    'Geocoding': 1_500,
+    'Reverse Geocoding': 1_500,
+    'Directions': 750,
+    'Static Maps': 3_000,
+    'Isochrone': 500,
   },
   'Business': {
-    'Geocoding': 25_000,
-    'Reverse Geocoding': 25_000,
-    'Directions': 15_000,
-    'Static Maps': 50_000,
-    'Isochrone': 5_000,
-    'Distance Matrix': 5_000,
+    'Geocoding': 3_000,
+    'Reverse Geocoding': 3_000,
+    'Directions': 2_000,
+    'Static Maps': 6_000,
+    'Isochrone': 1_000,
+    'Distance Matrix': 1_000,
   },
   'Starter (Legacy)': {
-    'Geocoding': 2_000,
-    'Static Maps': 4_000,
+    'Geocoding': 750,
+    'Static Maps': 1_500,
   },
 };
+
+const DEMO_USER = {
+  username: 'demouser',
+  email: 'demo@example.com',
+  password: 'demopass123',
+};
+
+const DEMO_PLAN = 'Business';
 
 const FILL_LEVELS = [0.05, 0.18, 0.4, 0.62, 0.85, 0.97, 1];
 
 const CHUNK_SIZE = 1_000;
+
+const DEMO_DAYS_ELAPSED = 20;
 
 const pick = (items) => items[Math.floor(Math.random() * items.length)];
 
@@ -132,6 +143,71 @@ const seedCatalog = async (sql) => {
     `${limitCount} plan/API limits ensured.`);
 };
 
+const seedDemoAccount = async (sql) => {
+  const hash = await hashPassword(DEMO_USER.password);
+
+  await sql`
+    INSERT INTO users (username, email, hash)
+    VALUES (${DEMO_USER.username}, ${DEMO_USER.email}, ${hash})
+    ON CONFLICT (email) DO NOTHING`;
+
+  const [user] = await sql`
+    SELECT user_id FROM users WHERE email = ${DEMO_USER.email}`;
+
+  const [active] = await sql`
+    SELECT subscription_id FROM subscriptions
+    WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
+
+  if (active) {
+    console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} already subscribed.`);
+    return;
+  }
+
+  const [plan] = await sql`
+    SELECT plan_id, price_per_month FROM plans WHERE plan_name = ${DEMO_PLAN}`;
+
+  await sql.begin(async (sql) => {
+    const [sub] = await sql`
+      INSERT INTO subscriptions (user_id, plan_id)
+      VALUES (${user.user_id}, ${plan.plan_id})
+      RETURNING subscription_id, started_at`;
+
+    await sql`
+      INSERT INTO payment_history (subscription_id, amount_paid, card_last4, period_start)
+      VALUES (${sub.subscription_id}, ${plan.price_per_month}, '4242',
+              (${sub.started_at} AT TIME ZONE 'UTC')::date)`;
+  });
+
+  console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} on ${DEMO_PLAN}.`);
+};
+
+const backdateFreshPeriods = async (sql) => {
+  const fresh = await sql`
+    SELECT ph.subscription_id
+    FROM payment_history ph
+    JOIN subscriptions s ON s.subscription_id = ph.subscription_id
+    WHERE s.ended_at IS NULL AND ph.period_start = CURRENT_DATE`;
+
+  if (fresh.length === 0) return 0;
+
+  const ids = fresh.map((row) => row.subscription_id);
+
+  await sql.begin(async (sql) => {
+    await sql`
+      UPDATE subscriptions
+         SET started_at = started_at - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
+       WHERE subscription_id IN ${sql(ids)}`;
+
+    await sql`
+      UPDATE payment_history
+         SET period_start = period_start - ${DEMO_DAYS_ELAPSED}::int,
+             paid_at      = paid_at      - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
+       WHERE subscription_id IN ${sql(ids)} AND period_start = CURRENT_DATE`;
+  });
+
+  return fresh.length;
+};
+
 const findSeedTargets = (sql) => sql`
   SELECT s.user_id,
          l.api_product_id,
@@ -165,7 +241,6 @@ const buildRows = (target, now) => {
 const insertUsage = async (sql, rows) => {
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    // postgres.js expands an array of objects into one multi-row INSERT
     await sql`INSERT INTO api_usage ${sql(chunk, 'user_id', 'api_product_id', 'used_at')}`;
   }
 };
@@ -182,6 +257,11 @@ const seedUsage = async (sql, reset) => {
     await sql`DELETE FROM api_usage`;
     console.log(`Usage: deleted ${count} existing rows.`);
   }
+
+  const backdated = await backdateFreshPeriods(sql);
+
+  if (backdated > 0)
+    console.log(`Usage: backdated ${backdated} billing period(s) by ${DEMO_DAYS_ELAPSED} days.`);
 
   const targets = await findSeedTargets(sql);
 
@@ -208,6 +288,7 @@ const sql = createDb();
 
 try {
   await seedCatalog(sql);
+  await seedDemoAccount(sql);
   await seedUsage(sql, process.argv.includes('--reset'));
 } catch (err) {
   console.error(err);

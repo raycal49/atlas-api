@@ -1,17 +1,103 @@
 import { getJson, postForm } from "./api.js";
-import { showFormError, showFieldErrors, hideErrors } from "./ui.js";
+import { showFormError, showFormNotice, showFieldErrors, hideErrors, formatMoney, monthDay, daysBetween } from "./ui.js";
 
 const planList = document.querySelector("#planList");
 const paymentForm = document.querySelector("#paymentForm");
 const chosenPlanName = document.querySelector("#chosenPlanName");
 const submitBtn = paymentForm.querySelector('button[type="submit"]');
+const cardField = document.querySelector("#cardField");
+const cardInput = document.querySelector("#card_number");
+const dueToday = document.querySelector("#dueToday");
+const effectiveNote = document.querySelector("#effectiveNote");
 const FIELDS = ["card_number"];
 
 let selectedPlan = null;
+let checkout = null;
+let currentPlan = null;
 
-const choosePlan = (planName) => {
-    selectedPlan = planName;
-    chosenPlanName.textContent = planName;
+const isFree = (plan) => Number(plan.price_per_month) === 0;
+
+const isPlanChange = (plan) =>
+    currentPlan !== null && plan.plan_name !== currentPlan.plan;
+
+const isDowngrade = (plan) =>
+    isPlanChange(plan) && Number(plan.price_per_month) <= Number(currentPlan.price);
+
+const isUpgrade = (plan) =>
+    isPlanChange(plan) && Number(plan.price_per_month) > Number(currentPlan.price);
+
+const isCurrent = (plan) => currentPlan !== null && !isPlanChange(plan);
+
+const startOfNextCycle = () =>
+    currentPlan?.bill_due ? monthDay(currentPlan.bill_due) : null;
+
+const proratedUpgrade = (newPrice) => {
+    const difference = Number(newPrice) - Number(currentPlan.price);
+
+    if (Number(currentPlan.price) === 0) return difference.toFixed(2);
+
+    if (!currentPlan.bill_start || !currentPlan.bill_due) return null;
+
+    const totalDays = daysBetween(currentPlan.bill_start, currentPlan.bill_due);
+    const daysRemaining = daysBetween(new Date(), currentPlan.bill_due);
+
+    const billableDays = daysRemaining <= 0 ? totalDays : daysRemaining;
+
+    return (difference * billableDays / totalDays).toFixed(2);
+};
+
+const checkoutFor = (plan) => {
+    const starts = startOfNextCycle();
+    const upgradeAmount = isUpgrade(plan) ? proratedUpgrade(plan.price_per_month) : null;
+
+    if (isDowngrade(plan))
+        return {
+            dueValue: formatMoney(0),
+            note: starts ? `${plan.plan_name} starts ${starts}` : "",
+            submit: "Subscribe",
+            needsCard: false,
+        };
+
+    if (isUpgrade(plan))
+        return {
+            dueValue: upgradeAmount === null
+                ? "prorated for the days left in your billing period"
+                : formatMoney(upgradeAmount),
+            note: "",
+            submit: "Pay",
+            needsCard: true,
+        };
+
+    if (isFree(plan))
+        return {
+            dueValue: formatMoney(plan.price_per_month),
+            note: "",
+            submit: "Subscribe",
+            needsCard: false,
+        };
+
+    return {
+        dueValue: formatMoney(plan.price_per_month),
+        note: "",
+        submit: "Pay",
+        needsCard: true,
+    };
+}
+
+const choosePlan = (plan) => {
+    selectedPlan = plan;
+    checkout = checkoutFor(plan);
+
+    chosenPlanName.textContent = plan.plan_name;
+    dueToday.textContent = checkout.dueValue;
+    effectiveNote.textContent = checkout.note;
+    effectiveNote.classList.toggle("d-none", !checkout.note);
+    submitBtn.textContent = checkout.submit;
+
+    cardField.classList.toggle("d-none", !checkout.needsCard);
+    cardInput.required = checkout.needsCard;
+    if (!checkout.needsCard) cardInput.value = "";
+
     hideErrors(FIELDS);
     paymentForm.classList.remove("d-none");
     paymentForm.scrollIntoView({ behavior: "smooth" });
@@ -47,7 +133,13 @@ const renderPlans = (plans) => {
         chooseBtn.className = "btn btn-primary mt-auto";
         chooseBtn.dataset.auth = "in";
         chooseBtn.textContent = "Choose";
-        chooseBtn.addEventListener("click", () => choosePlan(plan.plan_name));
+        chooseBtn.addEventListener("click", () => choosePlan(plan));
+
+        if (isCurrent(plan)) {
+            chooseBtn.textContent = "Current plan";
+            chooseBtn.className = "btn btn-outline-secondary mt-auto";
+            chooseBtn.disabled = true;
+        }
 
         const signInLink = document.createElement("a");
         signInLink.className = "btn btn-outline-secondary mt-auto";
@@ -64,12 +156,25 @@ const renderPlans = (plans) => {
     planList.replaceChildren(fragment);
 }
 
-async function loadPlans() {
-    try {
-        const data = await getJson("/plans");
-        if (!data) return;
+async function loadCurrentPlan() {
+    if (!document.documentElement.classList.contains("auth-in")) return;
 
-        renderPlans(data.plans);
+    try {
+        const data = await getJson("/data");
+        currentPlan = data?.dashboardData ?? null;
+    } catch (e) {
+        console.error(e);
+        currentPlan = null;
+    }
+}
+
+async function init() {
+    try {
+        const [plansData] = await Promise.all([getJson("/plans"), loadCurrentPlan()]);
+
+        if (!plansData) return;
+
+        renderPlans(plansData.plans);
     } catch (e) {
         console.error(e);
         showFormError("Could not load plans. Please refresh.");
@@ -80,14 +185,24 @@ async function payForPlan() {
     submitBtn.disabled = true;
 
     try {
-        const { ok, status, body } = await postForm("/subscriptions", {
-            plan_name: selectedPlan,
-            card_number: document.querySelector("#card_number").value,
-        });
+        const fields = { plan_name: selectedPlan.plan_name };
+        if (checkout.needsCard) fields.card_number = cardInput.value;
 
-        if (ok) {
-            window.location.href = "/dashboard?paid=" + body.paymentId;
+        const {status, body } = await postForm("/subscriptions", fields);
+
+        const {charged, paymentId} = body.subscription ?? {};
+
+        if (charged == true) {
+            window.location.href = "/dashboard?paid=" + paymentId;
             return;
+        }
+        else if (charged === false) {
+            const starts = startOfNextCycle();
+
+            showFormNotice(starts
+                ? `You'll move to ${selectedPlan.plan_name} on ${starts}.`
+                : `You'll move to ${selectedPlan.plan_name} at the start of your next billing cycle.`);
+                return;
         }
 
         if (status === 401) {
@@ -122,4 +237,4 @@ paymentForm.addEventListener("submit", async (event) => {
 
 paymentForm.addEventListener("input", () => hideErrors(FIELDS));
 
-loadPlans();
+init();

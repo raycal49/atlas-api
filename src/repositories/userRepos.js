@@ -5,9 +5,9 @@ import {
 
 const UNIQUE_VIOLATION = '23505';
 
-export const USAGE_PAGE_SIZE = 25;
+export const PAGE_SIZE = 25;
 
-const insertSubscriptionWithPayment = async (sql, userId, planId, pricePerMonth, cardLast4) => {
+const insertSubscriptionWithPayment = async (sql, userId, planId, amount, cardLast4) => {
   const [sub] = await sql`
     INSERT INTO subscriptions (user_id, plan_id)
     VALUES (${userId}, ${planId})
@@ -17,7 +17,7 @@ const insertSubscriptionWithPayment = async (sql, userId, planId, pricePerMonth,
     INSERT INTO payment_history
       (subscription_id, amount_paid, card_last4, period_start)
     VALUES
-      (${sub.subscription_id}, ${pricePerMonth}, ${cardLast4},
+      (${sub.subscription_id}, ${amount}, ${cardLast4},
        (${sub.started_at} AT TIME ZONE 'UTC')::date)
     RETURNING payment_id`;
 
@@ -52,7 +52,7 @@ export const createUserRepository = (sql) => ({
 
   findActiveSubscription: async (userId) => {
     const rows = await sql`
-      SELECT subscription_id, plan_id, started_at
+      SELECT subscription_id, plan_id, pending_plan_id, started_at
       FROM subscriptions
       WHERE user_id = ${userId} AND ended_at IS NULL`;
     return rows[0];
@@ -109,7 +109,7 @@ export const createUserRepository = (sql) => ({
       WHERE ${filters}
       ${keyset}
       ORDER BY u.used_at DESC, u.api_usage_id DESC
-      LIMIT ${USAGE_PAGE_SIZE + 1}`;
+      LIMIT ${PAGE_SIZE + 1}`;
   },
 
   findAllApiProducts: async () => {
@@ -138,26 +138,33 @@ export const createUserRepository = (sql) => ({
     ORDER BY ap.api_name`
   },
 
-  subscribeToPlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
+  subscribeToPlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
       return await sql.begin((sql) =>
-        insertSubscriptionWithPayment(sql, userId, planId, pricePerMonth, cardLast4));
+        insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4));
     } catch (err) {
       throw translateUniqueViolation(err);
     }
   },
 
-  changePlan: async (userId, planId, pricePerMonth, cardLast4 = null) => {
+  changePlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
       return await sql.begin(async (sql) => {
         await sql`
-          UPDATE subscriptions SET ended_at = now()
+          UPDATE subscriptions SET ended_at = now(), pending_plan_id = NULL
           WHERE user_id = ${userId} AND ended_at IS NULL`;
 
-        return insertSubscriptionWithPayment(sql, userId, planId, pricePerMonth, cardLast4);
+        return insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4);
       });
     } catch (err) {
       throw translateUniqueViolation(err);
     }
+  },
+
+  schedulePlanChange: async (userId, planId) => {
+    await sql`
+      UPDATE subscriptions
+      SET pending_plan_id = ${planId}
+      WHERE user_id = ${userId} AND ended_at IS NULL`;
   },
 });
