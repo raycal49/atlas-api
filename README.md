@@ -2,14 +2,14 @@
 
 A billing and metering backend for a fictional geospatial API company. Users register, pick a plan, get charged a prorated amount when they upgrade, and watch their monthly call quota fill up on a dashboard.
 
-![Node](https://img.shields.io/badge/Node-26-339933)
+![Node](https://img.shields.io/badge/Node-22-339933)
 ![Postgres](https://img.shields.io/badge/PostgreSQL-17-4169E1)
 ![CI](https://github.com/raycal49/processingTest/actions/workflows/node.js.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 | Layer | Technology |
 | --- | --- |
-| Runtime | Node.js 26, ES modules |
+| Runtime | Node.js 22, ES modules |
 | API | Express 5 |
 | Database | PostgreSQL 17 via postgres.js |
 | Validation | Zod |
@@ -24,6 +24,7 @@ A billing and metering backend for a fictional geospatial API company. Users reg
      push before taking the shot. A short GIF of choosing a plan and landing on the
      dashboard with the receipt banner would work even better than a still. -->
 
+![Homepage](docs/index.png)
 ![Dashboard](docs/dashboard.png)
 
 <!-- Once it is deployed, this line goes directly under the title, above the badges:
@@ -101,7 +102,7 @@ docker/postgres/init/schema.sql
 
 ### Prerequisites
 
-- Node.js 26 or newer
+- Node.js 22 or newer
 - Docker, for the PostgreSQL container
 
 ### Run it
@@ -119,7 +120,7 @@ Then open http://localhost:3000 and log in as `demouser` / `demopass123`. That a
 
 `npm run setup` is `docker compose up -d --wait` followed by the seed. The schema is applied by Postgres itself on first boot from `docker/postgres/init/schema.sql`, mounted into the container's entrypoint directory. To reseed later, `npm run seed:usage:reset`.
 
-The only value in `.env` worth changing is `JWT_SECRET`:
+The only value in `.env` which must be changed is `JWT_SECRET`:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
