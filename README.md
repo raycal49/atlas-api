@@ -2,7 +2,7 @@
 
 A billing and metering backend for a fictional geospatial API company. Users register, pick a plan, get charged a prorated amount when they upgrade, and watch their monthly call quota fill up on a dashboard.
 
-![Node](https://img.shields.io/badge/Node-22-339933)
+![Node](https://img.shields.io/badge/Node-26-339933)
 ![Postgres](https://img.shields.io/badge/PostgreSQL-17-4169E1)
 ![CI](https://github.com/raycal49/processingTest/actions/workflows/node.js.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -54,7 +54,6 @@ A billing and metering backend for a fictional geospatial API company. Users reg
 - Billing history, plus the upcoming charge.
 
 Card numbers never reach the database. The Zod schema slices the input down to the last four digits during validation, so the service layer only ever sees `4242`.
----
 
 ## Getting started
 
