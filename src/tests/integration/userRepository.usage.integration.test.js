@@ -20,6 +20,12 @@ const MARCH_10_THROUGH_20 = {
   to: '2026-03-21T00:00:00.000Z',
 };
 
+const MOMENT_BEFORE_OPENING = '2026-03-09T23:59:59Z';
+
+const CLOSING_INSTANT = '2026-03-21T00:00:00Z';
+
+const FIRST_INSTANT_OF_PERIOD = `${PERIOD_START}T00:00:00Z`;
+
 const cursorFrom = (row) => ({
   at: row.used_at.toISOString(),
   id: row.api_usage_id,
@@ -58,16 +64,16 @@ describe('findUsageLogPage', () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
 
-    const momentBeforeOpening = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-09T23:59:59Z',
+      used_at: MOMENT_BEFORE_OPENING,
     });
 
-    const closingInstant = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-21T00:00:00Z',
+      used_at: CLOSING_INSTANT,
     });
 
     const calls = await userRepository.findUsageLogPage(
@@ -173,10 +179,10 @@ describe('findPlanLimitsWithUsage', () => {
     const apiProduct = await makeApiProduct();
     const plan = await makeMeteredPlan([apiProduct.api_product_id]);
 
-    const openingInstant = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-01T00:00:00Z',
+      used_at: FIRST_INSTANT_OF_PERIOD,
     });
 
     const [row] = await userRepository.findPlanLimitsWithUsage(

@@ -5,7 +5,7 @@ const getDebugOption = () => {
     return false;
   }
 
-  return (_connection, query, parameters, _parameterTypes) => {
+  return (_connection, query, parameters) => {
     console.log('\n--- PostgreSQL query ---');
     console.log(query);
     console.log('Parameters:', parameters);

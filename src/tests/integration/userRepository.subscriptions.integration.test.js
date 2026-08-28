@@ -5,7 +5,6 @@ import { makePlan, makeUser, } from './fixtures.js';
 import { testSql } from './testDb.js';
 
 const userRepository = createUserRepository(testSql);
-const utcDay = (value) => new Date(value).toISOString().slice(0, 10);
 
 describe('subscribeToPlan', () => {
   it('creates an active subscription and bills it', async () => {
