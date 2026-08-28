@@ -7,6 +7,23 @@ A billing and metering backend for a fictional geospatial API company. Users reg
 ![CI](https://github.com/raycal49/processingTest/actions/workflows/node.js.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<!-- Worth replacing with a GIF eventually: choosing a plan, the prorated charge,
+     landing on the dashboard with the receipt banner. A still cannot show that flow. -->
+
+<p align="center">
+  <img src="docs/dashboard.png" width="820"
+       alt="Dashboard showing current plan, next bill date, and per-API usage bars in warning and limit-reached states">
+</p>
+<p align="center">
+  <sub>Business plan, 20 days into a billing period, usage seeded across all six products.</sub>
+</p>
+
+<details>
+<summary><b>More screenshots</b></summary>
+<br>
+<img src="docs/index.png" width="820" alt="Homepage">
+</details>
+
 | Layer | Technology |
 | --- | --- |
 | Runtime | Node.js 22, ES modules |
@@ -18,14 +35,6 @@ A billing and metering backend for a fictional geospatial API company. Users reg
 | Testing | Vitest, Supertest |
 | Local infrastructure | Docker Compose |
 | CI | GitHub Actions |
-
-<!-- SCREENSHOT GOES HERE. Save it to docs/dashboard.png and this line renders it.
-     Until the file exists this shows a broken image, so delete the line below if you
-     push before taking the shot. A short GIF of choosing a plan and landing on the
-     dashboard with the receipt banner would work even better than a still. -->
-
-![Homepage](docs/index.png)
-![Dashboard](docs/dashboard.png)
 
 <!-- Once it is deployed, this line goes directly under the title, above the badges:
 
