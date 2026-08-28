@@ -280,11 +280,11 @@ The honest cost of stateless tokens is revocation. Logging out clears both cooki
 
 There is also no refresh token, so an active user is logged out an hour after login rather than after a stretch of inactivity.
 
-### Tests run against real Postgres
+### Integration Tests run against real Postgres
 
 The unit suite covers `userService`, where the billing rules live, with a hand-rolled mock repository and fake timers for the proration math. That is the right shape for that code, since proration is arithmetic against a clock and has no business touching a database.
 
-Everything else runs against an actual Postgres container. Mocking was not an option for the parts I most wanted covered, because the partial unique index, the composite pagination index, and the `23505` translation are the behavior. A mocked `sql` would happily let a second active subscription through and prove nothing.
+Everything else runs against an actual Postgres container. Mocking was not an option for the parts I most wanted covered, because the partial unique index, the composite pagination index, and the `23505` translation are the behavior. A mocked `sql` would let a second active subscription through and prove nothing. The idea was to test across the layers, ensuring correctness across the application.
 
 The setup is a second Compose file on its own port and volume, so the test database is never the dev database. `testDb.js` refuses to start unless `NODE_ENV=test` and the connection URL is exactly `127.0.0.1:55432/geoapp_test`, since it runs `TRUNCATE ... CASCADE` between every test and pointing that at the wrong database would be a bad afternoon. Files run serially, and every test starts from an empty schema and builds only the rows it needs through the fixture helpers.
 
@@ -300,7 +300,14 @@ The setup is a second Compose file on its own port and volume, so the test datab
 
 ## What I would do next
 
-Write the billing job that closes a period, charges the card, and promotes `pending_plan_id`, since that is the one piece of the model that is designed but not built. Move the schema onto real migrations. Add rate limiting to the auth routes. Then deploy it somewhere with a managed Postgres so the demo link is real.
+- Write a billing job that ends a period, charges the card, and utilizes `pending_plan_id`
+- Redo the frontend in React
+- Port the project to TypeScript
+- Actually test the frontend
+- Add end-to-end tests
+- Move the schema onto real migrations 
+- Add rate limiting to the auth routes 
+- Deploy the project somewhere with a managed Postgres 
 
 ## License
 
