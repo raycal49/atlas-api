@@ -8,7 +8,7 @@ export const createApp = ({
   userRouter,
   pageRouter,
   errorHandler,
-}) =>{
+}) => {
   const app = express();
 
   app.use(logger('dev'));

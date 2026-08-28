@@ -1,8 +1,4 @@
-import {
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createAuthRepository } from '../../repositories/authRepository.js';
 import { makeUser } from './fixtures.js';
@@ -14,8 +10,7 @@ describe('findUserCredentials', () => {
   it('returns the user_id and hash for an existing username', async () => {
     const user = await makeUser();
 
-    const credentials =
-      await authRepository.findUserCredentials(user.username);
+    const credentials = await authRepository.findUserCredentials(user.username);
 
     expect(credentials).toEqual({
       user_id: user.user_id,

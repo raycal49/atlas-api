@@ -8,9 +8,7 @@ const app = createTestApp();
 
 describe('GET /plans', () => {
   it('is readable without a token', async () => {
-    await request(app)
-      .get('/plans')
-      .expect(200);
+    await request(app).get('/plans').expect(200);
   });
 
   it('returns only active plans, cheapest first', async () => {
@@ -22,9 +20,7 @@ describe('GET /plans', () => {
       is_active: false,
     });
 
-    const response = await request(app)
-      .get('/plans')
-      .expect(200);
+    const response = await request(app).get('/plans').expect(200);
 
     expect(response.body.plans.map((plan) => plan.plan_name)).toEqual([
       'launch',

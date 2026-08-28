@@ -82,7 +82,8 @@ describe('GET /usage/log', () => {
       .set('Cookie', await tokenCookieFor(user.user_id))
       .expect(200);
 
-    expect(response.body.log.calls.map((call) => call.api_name))
-      .toEqual(['geocode']);
+    expect(response.body.log.calls.map((call) => call.api_name)).toEqual([
+      'geocode',
+    ]);
   });
 });

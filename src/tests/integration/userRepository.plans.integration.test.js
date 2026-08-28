@@ -22,7 +22,11 @@ describe('findActivePlanByName', () => {
     await makePlan({ plan_name: 'retired', is_active: false });
     await makePlan({ plan_name: 'launch' });
 
-    expect(await userRepository.findActivePlanByName('retired')).toBeUndefined();
-    expect(await userRepository.findActivePlanByName('no-such-plan')).toBeUndefined();
+    expect(
+      await userRepository.findActivePlanByName('retired'),
+    ).toBeUndefined();
+    expect(
+      await userRepository.findActivePlanByName('no-such-plan'),
+    ).toBeUndefined();
   });
 });

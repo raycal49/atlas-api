@@ -2,7 +2,8 @@ import { UsernameTakenError } from '../errors/authErrors.js';
 
 export const createAuthRepository = (sql) => ({
   findUserCredentials: async (name) => {
-    const rows = await sql`SELECT user_id, hash FROM users WHERE username = ${name}`;
+    const rows =
+      await sql`SELECT user_id, hash FROM users WHERE username = ${name}`;
     return rows[0];
   },
   insertUser: async (username, hash, email) => {
@@ -12,12 +13,13 @@ export const createAuthRepository = (sql) => ({
         VALUES (${username}, ${hash}, ${email})
         RETURNING user_id
         `;
-        return rows[0];
+      return rows[0];
     } catch (err) {
       if (err.code === '23505')
-        throw new UsernameTakenError("Account with this username already exists");
-      else
-        throw err;
+        throw new UsernameTakenError(
+          'Account with this username already exists',
+        );
+      else throw err;
     }
-  }
+  },
 });

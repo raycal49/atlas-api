@@ -7,7 +7,13 @@ const UNIQUE_VIOLATION = '23505';
 
 export const PAGE_SIZE = 25;
 
-const insertSubscriptionWithPayment = async (tx, userId, planId, amount, cardLast4) => {
+const insertSubscriptionWithPayment = async (
+  tx,
+  userId,
+  planId,
+  amount,
+  cardLast4,
+) => {
   const [sub] = await tx`
     INSERT INTO subscriptions (user_id, plan_id)
     VALUES (${userId}, ${planId})
@@ -135,13 +141,14 @@ export const createUserRepository = (sql) => ({
     FROM plan_api_limits l
     JOIN api_products ap ON ap.api_product_id = l.api_product_id
     WHERE l.plan_id = ${planId}
-    ORDER BY ap.api_name`
+    ORDER BY ap.api_name`;
   },
 
   subscribeToPlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
       return await sql.begin((tx) =>
-        insertSubscriptionWithPayment(tx, userId, planId, amount, cardLast4));
+        insertSubscriptionWithPayment(tx, userId, planId, amount, cardLast4),
+      );
     } catch (err) {
       throw translateUniqueViolation(err);
     }
@@ -154,7 +161,13 @@ export const createUserRepository = (sql) => ({
           UPDATE subscriptions SET ended_at = now(), pending_plan_id = NULL
           WHERE user_id = ${userId} AND ended_at IS NULL`;
 
-        return insertSubscriptionWithPayment(tx, userId, planId, amount, cardLast4);
+        return insertSubscriptionWithPayment(
+          tx,
+          userId,
+          planId,
+          amount,
+          cardLast4,
+        );
       });
     } catch (err) {
       throw translateUniqueViolation(err);

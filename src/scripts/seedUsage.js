@@ -17,19 +17,22 @@ const PLANS = [
   {
     plan_name: 'Free',
     price_per_month: 0,
-    description: 'For side projects and evaluation. Geocoding and static maps, rate limited.',
+    description:
+      'For side projects and evaluation. Geocoding and static maps, rate limited.',
     is_active: true,
   },
   {
     plan_name: 'Developer',
     price_per_month: 49,
-    description: 'Routing, reverse geocoding and isochrones for apps in production.',
+    description:
+      'Routing, reverse geocoding and isochrones for apps in production.',
     is_active: true,
   },
   {
     plan_name: 'Business',
     price_per_month: 199,
-    description: 'The full API surface with headroom for high-traffic applications.',
+    description:
+      'The full API surface with headroom for high-traffic applications.',
     is_active: true,
   },
   {
@@ -40,29 +43,28 @@ const PLANS = [
   },
 ];
 
-
 const PLAN_LIMITS = {
-  'Free': {
-    'Geocoding': 250,
+  Free: {
+    Geocoding: 250,
     'Static Maps': 500,
   },
-  'Developer': {
-    'Geocoding': 1_500,
+  Developer: {
+    Geocoding: 1_500,
     'Reverse Geocoding': 1_500,
-    'Directions': 750,
+    Directions: 750,
     'Static Maps': 3_000,
-    'Isochrone': 500,
+    Isochrone: 500,
   },
-  'Business': {
-    'Geocoding': 3_000,
+  Business: {
+    Geocoding: 3_000,
     'Reverse Geocoding': 3_000,
-    'Directions': 2_000,
+    Directions: 2_000,
     'Static Maps': 6_000,
-    'Isochrone': 1_000,
+    Isochrone: 1_000,
     'Distance Matrix': 1_000,
   },
   'Starter (Legacy)': {
-    'Geocoding': 750,
+    Geocoding: 750,
     'Static Maps': 1_500,
   },
 };
@@ -134,7 +136,8 @@ const seedCatalog = async (sql) => {
 
   console.log(
     `Catalog: ${API_PRODUCTS.length} API products, ${PLANS.length} plans, ` +
-    `${limitCount} plan/API limits ensured.`);
+      `${limitCount} plan/API limits ensured.`,
+  );
 };
 
 const seedDemoAccount = async (sql) => {
@@ -153,7 +156,9 @@ const seedDemoAccount = async (sql) => {
     WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
 
   if (active) {
-    console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} already subscribed.`);
+    console.log(
+      `Demo: ${DEMO_USER.username} / ${DEMO_USER.password} already subscribed.`,
+    );
     return;
   }
 
@@ -172,7 +177,9 @@ const seedDemoAccount = async (sql) => {
               (${sub.started_at} AT TIME ZONE 'UTC')::date)`;
   });
 
-  console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} on ${DEMO_PLAN}.`);
+  console.log(
+    `Demo: ${DEMO_USER.username} / ${DEMO_USER.password} on ${DEMO_PLAN}.`,
+  );
 };
 
 const backdateFreshPeriods = async (sql) => {
@@ -243,7 +250,9 @@ const seedUsage = async (sql, reset) => {
   const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM api_usage`;
 
   if (count > 0 && !reset) {
-    console.log(`Usage: api_usage already has ${count} rows. Re-run with --reset to wipe and reseed.`);
+    console.log(
+      `Usage: api_usage already has ${count} rows. Re-run with --reset to wipe and reseed.`,
+    );
     return;
   }
 
@@ -255,12 +264,16 @@ const seedUsage = async (sql, reset) => {
   const backdated = await backdateFreshPeriods(sql);
 
   if (backdated > 0)
-    console.log(`Usage: backdated ${backdated} billing period(s) by ${DEMO_DAYS_ELAPSED} days.`);
+    console.log(
+      `Usage: backdated ${backdated} billing period(s) by ${DEMO_DAYS_ELAPSED} days.`,
+    );
 
   const targets = await findSeedTargets(sql);
 
   if (targets.length === 0) {
-    console.log('Usage: no active subscriptions -- pick a plan in the app first, then re-run.');
+    console.log(
+      'Usage: no active subscriptions -- pick a plan in the app first, then re-run.',
+    );
     return;
   }
 
@@ -275,7 +288,9 @@ const seedUsage = async (sql, reset) => {
     inserted += rows.length;
   }
 
-  console.log(`Usage: inserted ${inserted} rows across ${targets.length} user/API pairs.`);
+  console.log(
+    `Usage: inserted ${inserted} rows across ${targets.length} user/API pairs.`,
+  );
 };
 
 const sql = createDatabase();

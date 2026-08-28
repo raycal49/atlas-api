@@ -1,7 +1,7 @@
-import { describe, expect, it, } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { AlreadySubscribedError } from '../../errors/subscriptionErrors.js';
 import { createUserRepository } from '../../repositories/userRepository.js';
-import { makePlan, makeUser, } from './fixtures.js';
+import { makePlan, makeUser } from './fixtures.js';
 import { testSql } from './testDb.js';
 
 const userRepository = createUserRepository(testSql);
@@ -45,7 +45,9 @@ describe('subscribeToPlan', () => {
     const error = await subscribe().catch((err) => err);
 
     expect(error).toBeInstanceOf(AlreadySubscribedError);
-    expect(error.cause.constraint_name).toBe('one_active_subscription_per_user');
+    expect(error.cause.constraint_name).toBe(
+      'one_active_subscription_per_user',
+    );
   });
 
   it('leaves no subscription behind when the payment cannot be written', async () => {
@@ -92,8 +94,17 @@ describe('changePlan', () => {
       ORDER BY s.started_at`;
 
     expect(subscriptions).toMatchObject([
-      { plan_id: oldPlan.plan_id, ended_at: expect.any(Date), amount_paid: '9.99' },
-      { plan_id: newPlan.plan_id, ended_at: null, amount_paid: '29.99', card_last4: '1234' },
+      {
+        plan_id: oldPlan.plan_id,
+        ended_at: expect.any(Date),
+        amount_paid: '9.99',
+      },
+      {
+        plan_id: newPlan.plan_id,
+        ended_at: null,
+        amount_paid: '29.99',
+        card_last4: '1234',
+      },
     ]);
   });
 

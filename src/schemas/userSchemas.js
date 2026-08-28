@@ -1,4 +1,4 @@
-import * as z from "zod";
+import * as z from 'zod';
 
 export const registerSchema = z
   .object({
@@ -7,10 +7,7 @@ export const registerSchema = z
       .trim()
       .min(5, 'Username must be at least 5 characters')
       .max(15, 'Username must be at most 15 characters')
-      .regex(
-        /^[a-zA-Z0-9]+$/,
-        'Username may only contain letters and numbers'
-      ),
+      .regex(/^[a-zA-Z0-9]+$/, 'Username may only contain letters and numbers'),
 
     email: z
       .string({ required_error: 'Email is required' })
@@ -27,7 +24,7 @@ export const registerSchema = z
       .regex(/[A-Z]/, 'Password must contain an uppercase letter')
       .regex(/[0-9]/, 'Password must contain a number'),
   })
-  .strict(); 
+  .strict();
 
 export const loginSchema = z
   .object({

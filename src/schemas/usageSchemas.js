@@ -1,7 +1,10 @@
-import * as z from "zod";
+import * as z from 'zod';
 
 const blankable = (schema) =>
-  z.preprocess((value) => (value === '' ? undefined : value), schema.optional());
+  z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    schema.optional(),
+  );
 
 export const usageLogQuerySchema = z
   .object({

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { createUserRepository, PAGE_SIZE } from '../../repositories/userRepository.js';
+import {
+  createUserRepository,
+  PAGE_SIZE,
+} from '../../repositories/userRepository.js';
 import {
   makeApiProduct,
   makePlan,
@@ -104,7 +107,7 @@ describe('findUsageLogPage', () => {
     );
 
     const firstPage = firstBatch.slice(0, PAGE_SIZE);
-    
+
     const secondBatch = await userRepository.findUsageLogPage(
       user.user_id,
       { api_product_id: apiProduct.api_product_id },
@@ -121,9 +124,18 @@ describe('findUsageLogPage', () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
 
-    const oldest = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
-    const middle = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
-    const newest = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
+    const oldest = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
+    const middle = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
+    const newest = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
 
     const calls = await userRepository.findUsageLogPage(user.user_id, {}, null);
 

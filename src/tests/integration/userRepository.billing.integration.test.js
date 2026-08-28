@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createUserRepository } from '../../repositories/userRepository.js';
-import { makePayment, makePlan, makeSubscription, makeUser } from './fixtures.js';
+import {
+  makePayment,
+  makePlan,
+  makeSubscription,
+  makeUser,
+} from './fixtures.js';
 import { testSql } from './testDb.js';
 
 const userRepository = createUserRepository(testSql);

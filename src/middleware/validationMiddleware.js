@@ -5,7 +5,7 @@ export const groupValidationErrors = (issues) => {
     (validationErrors[field] ??= []).push(issue.message);
   }
   return validationErrors;
-}
+};
 
 export const validateBody = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body ?? {});
