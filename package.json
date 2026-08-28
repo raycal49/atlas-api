@@ -15,7 +15,7 @@
     "url": "github:raycal49/atlas-api"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "private": true,
   "type": "module",
