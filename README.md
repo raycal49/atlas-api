@@ -54,13 +54,48 @@ A billing and metering backend for a fictional geospatial API company. Users reg
 - Billing history, plus the upcoming charge.
 
 Card numbers never reach the database. The Zod schema slices the input down to the last four digits during validation, so the service layer only ever sees `4242`.
+---
 
-## Why I built this
+## Getting started
 
-I wanted a project where the hard part was the data model rather than the framework. Metered billing turned out to be a good fit. A user can be on one plan, have a different plan queued for next month, be partway through a billing period, and have thousands of usage rows attached to them, and all of those have to stay consistent with each other.
+### Prerequisites
 
-Most of the interesting decisions in this repo are about where correctness lives. My answer, mostly, is the database. A user cannot end up with two active subscriptions and cannot be billed twice for the same period, because Postgres will not let it happen rather than because a service function remembered to check.
+- Node.js 22 or newer
+- Docker, for the PostgreSQL container
 
+### Run it
+
+```bash
+git clone https://github.com/raycal49/processingTest.git
+cd processingTest
+npm install
+cp .env.example .env      # defaults match compose.yml and work as-is
+npm run setup             # starts Postgres and seeds plans, APIs, and a demo account
+npm run dev
+```
+Alternatively, instead of entering `cp .env.example .env` into your terminal, you could simply rename `.env.example` to `.env`. You could also do this for the test section below. For example, instead of `cp .env.integration.example .env.integration` you could just rename `.env.integration.example` to `.env.integration`.
+
+Then open http://localhost:3000 and log in as `demouser` / `demopass123`. That account sits on the Business plan, twenty days into a billing period, with usage seeded across all six API products at varying fill levels, so the dashboard has something to show. Progress bars land in the warning and limit-reached states rather than all sitting near zero.
+
+`npm run setup` is `docker compose up -d --wait` followed by the seed. The schema is applied by Postgres itself on first boot from `docker/postgres/init/schema.sql`, mounted into the container's entrypoint directory. To reseed later, `npm run seed:usage:reset`.
+
+The only value in `.env` which must be changed is `JWT_SECRET`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Set `DATABASE_LOG_QUERIES=true` to print every statement and its parameters.
+
+### Tests
+
+```bash
+npm run test:run                # unit, no database needed
+npm run db:integration:up       # test database, separate port and volume
+cp .env.integration.example .env.integration
+npm run test:integration
+npm run db:integration:destroy  # tear it down
+```
 ## Architecture
 
 ```mermaid
@@ -105,46 +140,6 @@ src/
   scripts/         seed script
   tests/           unit and integration
 docker/postgres/init/schema.sql
-```
-
-## Getting started
-
-### Prerequisites
-
-- Node.js 22 or newer
-- Docker, for the PostgreSQL container
-
-### Run it
-
-```bash
-git clone https://github.com/raycal49/processingTest.git
-cd processingTest
-npm install
-cp .env.example .env      # defaults match compose.yml and work as-is
-npm run setup             # starts Postgres and seeds plans, APIs, and a demo account
-npm run dev
-```
-
-Then open http://localhost:3000 and log in as `demouser` / `demopass123`. That account sits on the Business plan, twenty days into a billing period, with usage seeded across all six API products at varying fill levels, so the dashboard has something to show. Progress bars land in the warning and limit-reached states rather than all sitting near zero.
-
-`npm run setup` is `docker compose up -d --wait` followed by the seed. The schema is applied by Postgres itself on first boot from `docker/postgres/init/schema.sql`, mounted into the container's entrypoint directory. To reseed later, `npm run seed:usage:reset`.
-
-The only value in `.env` which must be changed is `JWT_SECRET`:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Set `DATABASE_LOG_QUERIES=true` to print every statement and its parameters.
-
-### Tests
-
-```bash
-npm run test:run                # unit, no database needed
-npm run db:integration:up       # test database, separate port and volume
-cp .env.integration.example .env.integration
-npm run test:integration
-npm run db:integration:destroy  # tear it down
 ```
 
 CI runs both suites on every push and pull request to `main`. The integration job stands up the same Compose file, copies the same committed env file so CI and a laptop cannot drift, and dumps database logs if anything fails.
@@ -251,7 +246,7 @@ Payments carry the same idea. `UNIQUE (subscription_id, period_start)` means one
 
 Plan changes split on price. An upgrade charges right away, so `changePlan` ends the current subscription, opens a new one, and writes the payment inside a single `sql.begin` transaction. A downgrade or a lateral move only sets `pending_plan_id` and charges nothing, because the user already paid for the period they are in.
 
-**What is missing:** nothing recurs. There is no scheduler, no cron, no worker. `next_bill_due` is computed on read as `period_start + interval '1 month'`, and `pending_plan_id` gets written but nothing ever comes along at the start of the next period to charge the card and promote the pending plan into place. The schema is shaped so that job would be straightforward to add, since it needs to find active subscriptions whose period has elapsed, insert a payment row for the new period, and swap the plan. Until that job exists, "monthly" is a claim the UI makes and the data model supports rather than something the system does on its own. Billing is a simulation throughout. No payment processor is involved, and any 13 to 19 digit number passes as a card.
+To be clear, there are no monthly payments. There is no scheduler, no cron, no worker. `next_bill_due` is computed on read as `period_start + interval '1 month'`, and `pending_plan_id` gets written but nothing ever comes along at the start of the next period to charge the card and promote the pending plan into place. The schema is shaped so that job would be straightforward to add, since it needs to find active subscriptions whose period has elapsed, insert a payment row for the new period, and swap the plan. Until that job exists, "monthly" is a claim the UI makes and the data model supports rather than something the system does on its own. Billing is a simulation throughout. No payment processor is involved, and any 13 to 19 digit number passes as a card.
 
 ### Cursor pagination on the call log
 
