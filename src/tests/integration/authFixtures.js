@@ -5,10 +5,7 @@ import { testJwtSecret } from './testApp.js';
 const ONE_HOUR = 60 * 60;
 const signTokenCookie = async (
   userId,
-  {
-    secret = testJwtSecret,
-    expiresAt,
-  } = {},
+  { secret = testJwtSecret, expiresAt } = {},
 ) => {
   const nowInSeconds = Math.floor(Date.now() / 1000);
 

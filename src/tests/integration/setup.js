@@ -1,13 +1,6 @@
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-} from 'vitest';
+import { afterAll, beforeAll, beforeEach } from 'vitest';
 
-import {
-  resetTestDatabase,
-  testSql,
-} from './testDb.js';
+import { resetTestDatabase, testSql } from './testDb.js';
 
 beforeAll(async () => {
   await testSql`SELECT 1`;

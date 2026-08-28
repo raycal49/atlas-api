@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { PAGE_SIZE } from '../../../repositories/userRepos.js';
+import { PAGE_SIZE } from '../../../repositories/userRepository.js';
 import { tokenCookieFor } from '../authFixtures.js';
 import {
   makeApiProduct,
@@ -78,11 +78,12 @@ describe('GET /usage/log', () => {
     });
 
     const response = await request(app)
-      .get(`/usage/log?api=${geocode.api_product_id}`)
+      .get(`/usage/log?api_product_id=${geocode.api_product_id}`)
       .set('Cookie', await tokenCookieFor(user.user_id))
       .expect(200);
 
-    expect(response.body.log.calls.map((call) => call.api_name))
-      .toEqual(['geocode']);
+    expect(response.body.log.calls.map((call) => call.api_name)).toEqual([
+      'geocode',
+    ]);
   });
 });

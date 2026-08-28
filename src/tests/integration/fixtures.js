@@ -111,10 +111,7 @@ export const makeUsage = async (overrides = {}) => {
 
 export const makeUsageRows = async (
   count,
-  {
-    used_at = DEFAULT_USED_AT,
-    ...columns
-  },
+  { used_at = DEFAULT_USED_AT, ...columns },
 ) => {
   const rows = Array.from({ length: count }, () => ({
     ...columns,

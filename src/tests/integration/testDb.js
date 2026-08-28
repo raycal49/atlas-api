@@ -1,12 +1,10 @@
-import { createDb } from '../../database/db.js';
+import { createDatabase } from '../../config/database.js';
 
 const assertSafeTestDatabase = () => {
   const rawUrl = process.env.DATABASE_URL;
 
   if (!rawUrl) {
-    throw new Error(
-      'Integration tests require DATABASE_URL.',
-    );
+    throw new Error('Integration tests require DATABASE_URL.');
   }
 
   let url;
@@ -14,17 +12,15 @@ const assertSafeTestDatabase = () => {
   try {
     url = new URL(rawUrl);
   } catch {
-    throw new Error(
-      'Integration test DATABASE_URL is not a valid URL.',
-    );
+    throw new Error('Integration test DATABASE_URL is not a valid URL.');
   }
 
   const isSafe =
-    process.env.NODE_ENV === 'test'
-    && url.hostname === '127.0.0.1'
-    && url.port === '55432'
-    && url.pathname === '/geoapp_test'
-    && url.username === 'postgres';
+    process.env.NODE_ENV === 'test' &&
+    url.hostname === '127.0.0.1' &&
+    url.port === '55432' &&
+    url.pathname === '/geoapp_test' &&
+    url.username === 'postgres';
 
   if (!isSafe) {
     throw new Error(
@@ -39,7 +35,7 @@ const assertSafeTestDatabase = () => {
 
 assertSafeTestDatabase();
 
-export const testSql = createDb();
+export const testSql = createDatabase();
 
 export const resetTestDatabase = async () => {
   await testSql`

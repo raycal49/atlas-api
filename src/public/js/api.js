@@ -2,7 +2,7 @@ export const getJson = async (url) => {
   const response = await fetch(url);
 
   if (response.status === 401) {
-    window.location.href = "/login.html";
+    window.location.href = '/login.html';
     return null;
   }
 
@@ -13,8 +13,8 @@ export const getJson = async (url) => {
 
 export const postForm = async (url, fields) => {
   const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(fields),
   });
 

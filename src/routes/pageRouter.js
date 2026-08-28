@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'node:path';
 
-export const createPageRoutes = ({ authMiddleware, viewsDir }) => {
+export const createPageRouter = ({ authMiddleware, viewsDir }) => {
   const router = Router();
 
   const sendProtectedPage = (file) => (req, res) => {

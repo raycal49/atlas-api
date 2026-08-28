@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { createUserRepository, PAGE_SIZE } from '../../repositories/userRepos.js';
+import {
+  createUserRepository,
+  PAGE_SIZE,
+} from '../../repositories/userRepository.js';
 import {
   makeApiProduct,
   makePlan,
@@ -19,6 +22,12 @@ const MARCH_10_THROUGH_20 = {
   from: '2026-03-10T00:00:00.000Z',
   to: '2026-03-21T00:00:00.000Z',
 };
+
+const MOMENT_BEFORE_OPENING = '2026-03-09T23:59:59Z';
+
+const CLOSING_INSTANT = '2026-03-21T00:00:00Z';
+
+const FIRST_INSTANT_OF_PERIOD = `${PERIOD_START}T00:00:00Z`;
 
 const cursorFrom = (row) => ({
   at: row.used_at.toISOString(),
@@ -58,16 +67,16 @@ describe('findUsageLogPage', () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
 
-    const momentBeforeOpening = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-09T23:59:59Z',
+      used_at: MOMENT_BEFORE_OPENING,
     });
 
-    const closingInstant = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-21T00:00:00Z',
+      used_at: CLOSING_INSTANT,
     });
 
     const calls = await userRepository.findUsageLogPage(
@@ -93,15 +102,15 @@ describe('findUsageLogPage', () => {
 
     const firstBatch = await userRepository.findUsageLogPage(
       user.user_id,
-      { api: apiProduct.api_product_id },
+      { api_product_id: apiProduct.api_product_id },
       null,
     );
 
     const firstPage = firstBatch.slice(0, PAGE_SIZE);
-    
+
     const secondBatch = await userRepository.findUsageLogPage(
       user.user_id,
-      { api: apiProduct.api_product_id },
+      { api_product_id: apiProduct.api_product_id },
       cursorFrom(firstPage.at(-1)),
     );
 
@@ -115,9 +124,18 @@ describe('findUsageLogPage', () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
 
-    const oldest = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
-    const middle = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
-    const newest = await makeUsage({ user_id: user.user_id, api_product_id: apiProduct.api_product_id });
+    const oldest = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
+    const middle = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
+    const newest = await makeUsage({
+      user_id: user.user_id,
+      api_product_id: apiProduct.api_product_id,
+    });
 
     const calls = await userRepository.findUsageLogPage(user.user_id, {}, null);
 
@@ -143,7 +161,7 @@ const makeMeteredPlan = async (apiProductIds, monthlyLimit = 1000) => {
   return plan;
 };
 
-describe('getPeriodApiCalls', () => {
+describe('findPlanLimitsWithUsage', () => {
   it('returns a calls for all api products user can access', async () => {
     const user = await makeUser();
     const apiProduct = await makeApiProduct();
@@ -159,7 +177,7 @@ describe('getPeriodApiCalls', () => {
       api_product_id: apiProduct.api_product_id,
     });
 
-    const calls = await userRepository.getPeriodApiCalls(
+    const calls = await userRepository.findPlanLimitsWithUsage(
       user.user_id,
       PERIOD_START,
       plan.plan_id,
@@ -173,13 +191,13 @@ describe('getPeriodApiCalls', () => {
     const apiProduct = await makeApiProduct();
     const plan = await makeMeteredPlan([apiProduct.api_product_id]);
 
-    const openingInstant = await makeUsage({
+    await makeUsage({
       user_id: user.user_id,
       api_product_id: apiProduct.api_product_id,
-      used_at: '2026-03-01T00:00:00Z',
+      used_at: FIRST_INSTANT_OF_PERIOD,
     });
 
-    const [row] = await userRepository.getPeriodApiCalls(
+    const [row] = await userRepository.findPlanLimitsWithUsage(
       user.user_id,
       PERIOD_START,
       plan.plan_id,

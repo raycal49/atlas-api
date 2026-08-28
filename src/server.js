@@ -1,14 +1,14 @@
 import createDebug from 'debug';
 import http from 'node:http';
 
-import { createDb } from './database/db.js';
+import { createDatabase } from './config/database.js';
 import { createJwtSecret } from './config/jwt.js';
 import { createContainer } from './container.js';
 import { createApp } from './app.js';
 
-const debug = createDebug('bankco:server');
+const debug = createDebug('atlas:server');
 
-const sql = createDb();
+const sql = createDatabase();
 const jwtSecret = createJwtSecret();
 const container = createContainer({ sql, jwtSecret });
 const app = createApp(container);
@@ -71,16 +71,16 @@ async function shutdown(signal) {
  */
 
 function normalizePort(val) {
-  const port = parseInt(val, 10);
+  const parsed = parseInt(val, 10);
 
-  if (isNaN(port)) {
+  if (isNaN(parsed)) {
     // named pipe
     return val;
   }
 
-  if (port >= 0) {
+  if (parsed >= 0) {
     // port number
-    return port;
+    return parsed;
   }
 
   return false;
@@ -95,9 +95,7 @@ function onError(error) {
     throw error;
   }
 
-  const bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  const bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
@@ -120,9 +118,7 @@ function onError(error) {
 
 function onListening() {
   const addr = server.address();
-  const bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
+  const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
   debug('Listening on ' + bind);
 
   if (typeof addr === 'string') {

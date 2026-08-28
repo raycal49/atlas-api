@@ -1,8 +1,8 @@
 // populate db                  "npm run seed:usage"
 // reset db then populate db    "npm run seed:usage:reset"
 
-import { createDb } from '../database/db.js';
-import { hashPassword } from '../services/argonServices.js';
+import { createDatabase } from '../config/database.js';
+import { hashPassword } from '../services/passwordService.js';
 
 const API_PRODUCTS = [
   'Geocoding',
@@ -17,19 +17,22 @@ const PLANS = [
   {
     plan_name: 'Free',
     price_per_month: 0,
-    description: 'For side projects and evaluation. Geocoding and static maps, rate limited.',
+    description:
+      'For side projects and evaluation. Geocoding and static maps, rate limited.',
     is_active: true,
   },
   {
     plan_name: 'Developer',
     price_per_month: 49,
-    description: 'Routing, reverse geocoding and isochrones for apps in production.',
+    description:
+      'Routing, reverse geocoding and isochrones for apps in production.',
     is_active: true,
   },
   {
     plan_name: 'Business',
     price_per_month: 199,
-    description: 'The full API surface with headroom for high-traffic applications.',
+    description:
+      'The full API surface with headroom for high-traffic applications.',
     is_active: true,
   },
   {
@@ -40,29 +43,28 @@ const PLANS = [
   },
 ];
 
-
 const PLAN_LIMITS = {
-  'Free': {
-    'Geocoding': 250,
+  Free: {
+    Geocoding: 250,
     'Static Maps': 500,
   },
-  'Developer': {
-    'Geocoding': 1_500,
+  Developer: {
+    Geocoding: 1_500,
     'Reverse Geocoding': 1_500,
-    'Directions': 750,
+    Directions: 750,
     'Static Maps': 3_000,
-    'Isochrone': 500,
+    Isochrone: 500,
   },
-  'Business': {
-    'Geocoding': 3_000,
+  Business: {
+    Geocoding: 3_000,
     'Reverse Geocoding': 3_000,
-    'Directions': 2_000,
+    Directions: 2_000,
     'Static Maps': 6_000,
-    'Isochrone': 1_000,
+    Isochrone: 1_000,
     'Distance Matrix': 1_000,
   },
   'Starter (Legacy)': {
-    'Geocoding': 750,
+    Geocoding: 750,
     'Static Maps': 1_500,
   },
 };
@@ -127,20 +129,15 @@ const seedPlanLimits = async (sql, planIds, productIds) => {
   return rows.length;
 };
 
-const ensureUsageIndex = (sql) => sql`
-  CREATE INDEX IF NOT EXISTS api_usage_user_used_at_idx
-    ON api_usage (user_id, used_at DESC)`;
-
 const seedCatalog = async (sql) => {
   const productIds = await seedApiProducts(sql);
   const planIds = await seedPlans(sql);
   const limitCount = await seedPlanLimits(sql, planIds, productIds);
 
-  await ensureUsageIndex(sql);
-
   console.log(
     `Catalog: ${API_PRODUCTS.length} API products, ${PLANS.length} plans, ` +
-    `${limitCount} plan/API limits ensured.`);
+      `${limitCount} plan/API limits ensured.`,
+  );
 };
 
 const seedDemoAccount = async (sql) => {
@@ -159,26 +156,30 @@ const seedDemoAccount = async (sql) => {
     WHERE user_id = ${user.user_id} AND ended_at IS NULL`;
 
   if (active) {
-    console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} already subscribed.`);
+    console.log(
+      `Demo: ${DEMO_USER.username} / ${DEMO_USER.password} already subscribed.`,
+    );
     return;
   }
 
   const [plan] = await sql`
     SELECT plan_id, price_per_month FROM plans WHERE plan_name = ${DEMO_PLAN}`;
 
-  await sql.begin(async (sql) => {
-    const [sub] = await sql`
+  await sql.begin(async (tx) => {
+    const [sub] = await tx`
       INSERT INTO subscriptions (user_id, plan_id)
       VALUES (${user.user_id}, ${plan.plan_id})
       RETURNING subscription_id, started_at`;
 
-    await sql`
+    await tx`
       INSERT INTO payment_history (subscription_id, amount_paid, card_last4, period_start)
       VALUES (${sub.subscription_id}, ${plan.price_per_month}, '4242',
               (${sub.started_at} AT TIME ZONE 'UTC')::date)`;
   });
 
-  console.log(`Demo: ${DEMO_USER.username} / ${DEMO_USER.password} on ${DEMO_PLAN}.`);
+  console.log(
+    `Demo: ${DEMO_USER.username} / ${DEMO_USER.password} on ${DEMO_PLAN}.`,
+  );
 };
 
 const backdateFreshPeriods = async (sql) => {
@@ -192,17 +193,17 @@ const backdateFreshPeriods = async (sql) => {
 
   const ids = fresh.map((row) => row.subscription_id);
 
-  await sql.begin(async (sql) => {
-    await sql`
+  await sql.begin(async (tx) => {
+    await tx`
       UPDATE subscriptions
          SET started_at = started_at - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
-       WHERE subscription_id IN ${sql(ids)}`;
+       WHERE subscription_id IN ${tx(ids)}`;
 
-    await sql`
+    await tx`
       UPDATE payment_history
          SET period_start = period_start - ${DEMO_DAYS_ELAPSED}::int,
              paid_at      = paid_at      - ${DEMO_DAYS_ELAPSED}::int * interval '1 day'
-       WHERE subscription_id IN ${sql(ids)} AND period_start = CURRENT_DATE`;
+       WHERE subscription_id IN ${tx(ids)} AND period_start = CURRENT_DATE`;
   });
 
   return fresh.length;
@@ -249,7 +250,9 @@ const seedUsage = async (sql, reset) => {
   const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM api_usage`;
 
   if (count > 0 && !reset) {
-    console.log(`Usage: api_usage already has ${count} rows. Re-run with --reset to wipe and reseed.`);
+    console.log(
+      `Usage: api_usage already has ${count} rows. Re-run with --reset to wipe and reseed.`,
+    );
     return;
   }
 
@@ -261,12 +264,16 @@ const seedUsage = async (sql, reset) => {
   const backdated = await backdateFreshPeriods(sql);
 
   if (backdated > 0)
-    console.log(`Usage: backdated ${backdated} billing period(s) by ${DEMO_DAYS_ELAPSED} days.`);
+    console.log(
+      `Usage: backdated ${backdated} billing period(s) by ${DEMO_DAYS_ELAPSED} days.`,
+    );
 
   const targets = await findSeedTargets(sql);
 
   if (targets.length === 0) {
-    console.log('Usage: no active subscriptions -- pick a plan in the app first, then re-run.');
+    console.log(
+      'Usage: no active subscriptions -- pick a plan in the app first, then re-run.',
+    );
     return;
   }
 
@@ -281,10 +288,12 @@ const seedUsage = async (sql, reset) => {
     inserted += rows.length;
   }
 
-  console.log(`Usage: inserted ${inserted} rows across ${targets.length} user/API pairs.`);
+  console.log(
+    `Usage: inserted ${inserted} rows across ${targets.length} user/API pairs.`,
+  );
 };
 
-const sql = createDb();
+const sql = createDatabase();
 
 try {
   await seedCatalog(sql);

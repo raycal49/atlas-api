@@ -1,4 +1,4 @@
-export const createErrorHandler = () => (err, req, res, next) => {
+export const createErrorMiddleware = () => (err, req, res, next) => {
   if (res.headersSent) return next(err);
 
   if (err.statusCode === 401 && req.accepts(['json', 'html']) === 'html')

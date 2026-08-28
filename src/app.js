@@ -4,11 +4,11 @@ import logger from 'morgan';
 
 export const createApp = ({
   publicDir,
-  authRoutes,
-  userRoutes,
-  pageRoutes,
+  authRouter,
+  userRouter,
+  pageRouter,
   errorHandler,
-}) =>{
+}) => {
   const app = express();
 
   app.use(logger('dev'));
@@ -18,9 +18,9 @@ export const createApp = ({
 
   app.use(express.static(publicDir));
 
-  app.use('/auth', authRoutes);
-  app.use('/', pageRoutes);
-  app.use('/', userRoutes);
+  app.use('/auth', authRouter);
+  app.use('/', pageRouter);
+  app.use('/', userRouter);
 
   app.use(errorHandler);
 

@@ -1,19 +1,25 @@
 import {
   AlreadySubscribedError,
   DuplicatePeriodPaymentError,
-} from '../errors/userErrors.js';
+} from '../errors/subscriptionErrors.js';
 
 const UNIQUE_VIOLATION = '23505';
 
 export const PAGE_SIZE = 25;
 
-const insertSubscriptionWithPayment = async (sql, userId, planId, amount, cardLast4) => {
-  const [sub] = await sql`
+const insertSubscriptionWithPayment = async (
+  tx,
+  userId,
+  planId,
+  amount,
+  cardLast4,
+) => {
+  const [sub] = await tx`
     INSERT INTO subscriptions (user_id, plan_id)
     VALUES (${userId}, ${planId})
     RETURNING subscription_id, started_at`;
 
-  const [payment] = await sql`
+  const [payment] = await tx`
     INSERT INTO payment_history
       (subscription_id, amount_paid, card_last4, period_start)
     VALUES
@@ -92,10 +98,10 @@ export const createUserRepository = (sql) => ({
     return rows[0];
   },
 
-  findUsageLogPage: async (userId, { api, from, to }, cursor) => {
+  findUsageLogPage: async (userId, { api_product_id, from, to }, cursor) => {
     const filters = sql`
       u.user_id = ${userId}
-      ${api ? sql`AND u.api_product_id = ${api}` : sql``}
+      ${api_product_id ? sql`AND u.api_product_id = ${api_product_id}` : sql``}
       ${from ? sql`AND u.used_at >= ${from}::timestamptz` : sql``}
       ${to ? sql`AND u.used_at <  ${to}::timestamptz` : sql``}`;
 
@@ -119,7 +125,7 @@ export const createUserRepository = (sql) => ({
       ORDER BY api_name`;
   },
 
-  getPeriodApiCalls: async (userId, periodStart, planId) => {
+  findPlanLimitsWithUsage: async (userId, periodStart, planId) => {
     return await sql`
     SELECT ap.api_product_id,
            ap.api_name,
@@ -135,13 +141,14 @@ export const createUserRepository = (sql) => ({
     FROM plan_api_limits l
     JOIN api_products ap ON ap.api_product_id = l.api_product_id
     WHERE l.plan_id = ${planId}
-    ORDER BY ap.api_name`
+    ORDER BY ap.api_name`;
   },
 
   subscribeToPlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
-      return await sql.begin((sql) =>
-        insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4));
+      return await sql.begin((tx) =>
+        insertSubscriptionWithPayment(tx, userId, planId, amount, cardLast4),
+      );
     } catch (err) {
       throw translateUniqueViolation(err);
     }
@@ -149,12 +156,18 @@ export const createUserRepository = (sql) => ({
 
   changePlan: async (userId, planId, amount, cardLast4 = null) => {
     try {
-      return await sql.begin(async (sql) => {
-        await sql`
+      return await sql.begin(async (tx) => {
+        await tx`
           UPDATE subscriptions SET ended_at = now(), pending_plan_id = NULL
           WHERE user_id = ${userId} AND ended_at IS NULL`;
 
-        return insertSubscriptionWithPayment(sql, userId, planId, amount, cardLast4);
+        return insertSubscriptionWithPayment(
+          tx,
+          userId,
+          planId,
+          amount,
+          cardLast4,
+        );
       });
     } catch (err) {
       throw translateUniqueViolation(err);

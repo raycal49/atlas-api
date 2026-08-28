@@ -50,10 +50,7 @@ describe('POST /auth/register', () => {
   });
 
   it('rejects a username that is already taken', async () => {
-    await request(app)
-      .post('/auth/register')
-      .send(REGISTRATION)
-      .expect(201);
+    await request(app).post('/auth/register').send(REGISTRATION).expect(201);
 
     const response = await request(app)
       .post('/auth/register')
@@ -86,10 +83,7 @@ describe('POST /auth/register', () => {
 
 describe('POST /auth/login', () => {
   it('rejects a password that does not match the stored hash', async () => {
-    await request(app)
-      .post('/auth/register')
-      .send(REGISTRATION)
-      .expect(201);
+    await request(app).post('/auth/register').send(REGISTRATION).expect(201);
 
     const response = await request(app)
       .post('/auth/login')
@@ -100,10 +94,7 @@ describe('POST /auth/login', () => {
   });
 
   it('sets both cookies when the password matches the stored hash', async () => {
-    await request(app)
-      .post('/auth/register')
-      .send(REGISTRATION)
-      .expect(201);
+    await request(app).post('/auth/register').send(REGISTRATION).expect(201);
 
     const response = await request(app)
       .post('/auth/login')
@@ -138,19 +129,11 @@ describe('POST /auth/logout', () => {
   it('ends the session it was holding', async () => {
     const agent = request.agent(app);
 
-    await agent
-      .post('/auth/register')
-      .send(REGISTRATION)
-      .expect(201);
+    await agent.post('/auth/register').send(REGISTRATION).expect(201);
 
-    await agent
-      .get('/data')
-      .set('Accept', 'application/json')
-      .expect(200);
+    await agent.get('/data').set('Accept', 'application/json').expect(200);
 
-    await agent
-      .post('/auth/logout')
-      .expect(302);
+    await agent.post('/auth/logout').expect(302);
 
     const response = await agent
       .get('/data')

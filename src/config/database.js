@@ -5,7 +5,7 @@ const getDebugOption = () => {
     return false;
   }
 
-  return (_connection, query, parameters, _parameterTypes) => {
+  return (_connection, query, parameters) => {
     console.log('\n--- PostgreSQL query ---');
     console.log(query);
     console.log('Parameters:', parameters);
@@ -30,9 +30,7 @@ const getSslOption = () => {
   }
 };
 
-export const createDb = (
-  connectionString = process.env.DATABASE_URL,
-) => {
+export const createDatabase = (connectionString = process.env.DATABASE_URL) => {
   if (!connectionString) {
     throw new Error('DATABASE_URL is required');
   }

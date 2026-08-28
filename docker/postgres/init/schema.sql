@@ -22,6 +22,9 @@ ALTER SCHEMA "public" OWNER TO "pg_database_owner";
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -98,7 +101,8 @@ CREATE TABLE IF NOT EXISTS "public"."subscriptions" (
     "user_id" "uuid" NOT NULL,
     "plan_id" "uuid",
     "started_at" timestamp with time zone DEFAULT ("now"() AT TIME ZONE 'utc'::"text") NOT NULL,
-    "ended_at" timestamp with time zone
+    "ended_at" timestamp with time zone,
+    "pending_plan_id" "uuid"
 );
 
 
@@ -177,7 +181,10 @@ ALTER TABLE ONLY "public"."users"
 
 
 
-CREATE INDEX "api_usage_user_id_idx" ON "public"."api_usage" USING "btree" ("user_id", "api_usage_id" DESC);
+-- Pagination index for the usage log.
+CREATE INDEX IF NOT EXISTS "api_usage_user_used_at_idx"
+    ON "public"."api_usage" ("user_id", "used_at" DESC);
+
 
 
 
@@ -207,6 +214,11 @@ ALTER TABLE ONLY "public"."plan_api_limits"
 
 ALTER TABLE ONLY "public"."plan_api_limits"
     ADD CONSTRAINT "plan_api_limits_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "public"."plans"("plan_id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."subscriptions"
+    ADD CONSTRAINT "subscriptions_pending_plan_id_fkey" FOREIGN KEY ("pending_plan_id") REFERENCES "public"."plans"("plan_id") ON UPDATE NO ACTION ON DELETE SET NULL;
 
 
 
